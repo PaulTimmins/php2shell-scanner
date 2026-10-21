@@ -71,6 +71,7 @@ produce `OUTDATED_PLATFORM`:
 | FreePBX | before 16 | Version 15 and older are EOL |
 | VitalPBX | before 4 | Version 3 is EOL |
 | openmediavault | before 8 | Version 7 and older are EOL |
+| PBXware | before 7 | Bundled chroot PHP; versions outside the supported 7/8 lines cannot receive normal vendor PHP updates |
 | Icinga Web 2 | before 2.9 | PHP 8 support |
 | Pandora FMS | before 760 | PHP 8 support |
 | Mautic | before 4.4 | PHP 8.0 support |
@@ -130,6 +131,8 @@ Implementation references include the official
 [FreePBX lifecycle](https://sangomakb.atlassian.net/wiki/spaces/FP/pages/653197359/FreePBX+Open+Source+-+FreePBX+Versions),
 [VitalPBX 3 EOL announcement](https://vitalpbx.com/blog/important-update-end-of-life-eol-announcement-for-vitalpbx-version-3/),
 [openmediavault releases](https://docs.openmediavault.org/en/8.x/releases.html),
+[PBXware v7 lifecycle](https://blog.bicomsystems.com/pbxware-v7-end-of-life/),
+[PBXware upgrade policy](https://support.bicomsystems.com/support/solutions/articles/67000715162-pbxware-update-upgrade),
 [Icinga Web 2.9 PHP 8 release](https://icinga.com/blog/releasing-icinga-web-v2-9-0/),
 [Pandora FMS PHP requirements](https://pandorafms.com/manual/!current/en/documentation/pandorafms/installation/01_installing),
 [Mautic releases](https://mautic.org/releases/),

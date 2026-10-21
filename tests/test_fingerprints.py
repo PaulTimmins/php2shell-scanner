@@ -141,6 +141,7 @@ class FingerprintTests(unittest.TestCase):
             "FreePBX": '<title>FreePBX 15.0.37</title>',
             "VitalPBX": '<title>VitalPBX 3.2.4</title>',
             "OpenMediaVault": '<title>openmediavault 7.7.24 Workbench</title>',
+            "PBXware": '<title>PBXware 6.7.3 by Bicom Systems</title>',
             "Icinga Web 2": '<title>Icinga Web 2 2.8.6</title>',
             "Pandora FMS": '<title>Pandora FMS 759</title>',
             "Mautic": '<meta name="generator" content="Mautic 4.3.1">',
@@ -162,6 +163,7 @@ class FingerprintTests(unittest.TestCase):
         self.assertIsNone(legacy_application_version({"LibreNMS": "21.1.0"}))
         self.assertIsNone(legacy_application_version({"FreePBX": "16.0"}))
         self.assertIsNone(legacy_application_version({"Icinga Web 2": "2.9.0"}))
+        self.assertIsNone(legacy_application_version({"PBXware": "7.6.4.2"}))
         self.assertIsNone(legacy_application_version({"SuiteCRM": "7.15.1"}))
         self.assertIsNone(legacy_application_version({"SuiteCRM": "8.10.0"}))
 
