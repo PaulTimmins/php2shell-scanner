@@ -47,13 +47,31 @@ RULES = {
     "Observium": (r"\bobservium\b", r"/observium/"),
     "Pandora FMS": (r"\bpandora fms\b", r"/pandora_console/"),
     "PBXware": (r"\bpbxware\b",),
+    "phpVirtualBox": (r"\bphpvirtualbox\b", r"\bphpvirtualbox(?:version)?="),
+    "Virtualizor": (r"\bvirtualizor\b", r"/virtualizor/"),
     # Inventory-only products whose primary management interfaces do not prove PHP.
     "Nagios Core": (r"\bnagios core\b", r"/nagios/cgi-bin/", r"/cgi-bin/nagios[0-9]?/"),
     "3CX": (r"\b3cx (?:phone system|web client|management console)\b", r"/webclient/#/"),
     "TrueNAS": (r"\btruenas\b", r"\bixsystems\b.*\btruenas\b"),
+    "Portainer": (r"\bportainer(?:\.io| community edition| business edition)?\b",),
+    "Proxmox VE": (r"\bproxmox virtual environment\b", r"\bproxmox ve\b", r"\bpve-manager/"),
+    "oVirt": (r"\bovirt engine\b", r"/ovirt-engine/"),
+    "Cockpit": (r"\bcockpit web console\b", r"/cockpit/(?:@[^/]+/)?system/"),
+    "VMware vSphere": (r"\bvmware vsphere\b", r"/ui/app/.*vsphere"),
+    "Xen Orchestra": (r"\bxen orchestra\b", r"\bxoa(?: login)?\b"),
 }
 
-NON_PHP_APPLICATIONS = {"3CX", "Nagios Core", "TrueNAS"}
+NON_PHP_APPLICATIONS = {
+    "3CX",
+    "Cockpit",
+    "Nagios Core",
+    "oVirt",
+    "Portainer",
+    "Proxmox VE",
+    "TrueNAS",
+    "VMware vSphere",
+    "Xen Orchestra",
+}
 
 
 def is_php_application(application: str) -> bool:

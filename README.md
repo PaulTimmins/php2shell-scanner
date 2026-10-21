@@ -43,14 +43,16 @@ HTML markers. Current fingerprints cover:
   VitalPBX, Incredible PBX, Elastix, FusionPBX, Issabel, and PBXware.
 - PHP monitoring consoles: Zabbix, Nagios XI, Icinga Web 2, ZoneMinder,
   LibreNMS, Cacti, Observium, and Pandora FMS.
+- PHP virtualization consoles: phpVirtualBox and Virtualizor.
 
 Detected names appear as `[apps=...]` in streamed text results, under `applications`
 and `application_evidence` in JSON, and in the final application summary. A recognized
 PHP application is positive evidence of a PHP stack but does not reveal its PHP
 version, so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
 
-TrueNAS, Nagios Core, and 3CX are also fingerprinted for inventory, but they do not
-count as PHP evidence. The current TrueNAS WebUI is Angular and nginx proxies its
+TrueNAS, Nagios Core, 3CX, Portainer, Proxmox VE, oVirt, Cockpit, VMware vSphere,
+and Xen Orchestra are also fingerprinted for inventory, but they do not count as
+PHP evidence. The current TrueNAS WebUI is Angular and nginx proxies its
 API/UI traffic to the middleware service. Nagios Core's classic interface uses CGI,
 while Nagios XI adds a PHP frontend. 3CX's web client is Angular and its server has
 used .NET Core; a 3CX match does not demonstrate a PHP runtime. These matches stay
@@ -75,6 +77,11 @@ Implementation references include the official
 [Observium requirements](https://docs.observium.org/software_requirements/),
 [Pandora FMS requirements](https://www.pandorafms.com/manual/!current/en/documentation/pandorafms/installation/01_installing),
 [PBXware release documentation](https://www.bicomsystems.com/files/public/Changelog_PBXware_8.0.0.1.pdf),
+[phpVirtualBox source and requirements](https://github.com/phpvirtualbox/phpvirtualbox),
+[Virtualizor installation documentation](https://www.virtualizor.com/docs/install/install-kvm/),
+[Portainer source](https://github.com/portainer/portainer),
+[oVirt Engine source](https://github.com/oVirt/ovirt-engine),
+[Cockpit source](https://github.com/cockpit-project/cockpit),
 [3CX Web Client documentation](https://www.3cx.com/blog/releases/web-based-voip-client/), and the
 [TrueNAS WebUI](https://github.com/truenas/webui).
 

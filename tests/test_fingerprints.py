@@ -64,6 +64,8 @@ class FingerprintTests(unittest.TestCase):
             "Observium": "<title>Observium</title>",
             "Pandora FMS": '<form action="/pandora_console/index.php">',
             "PBXware": "<title>PBXware by Bicom Systems</title>",
+            "phpVirtualBox": "<title>phpVirtualBox</title>",
+            "Virtualizor": "<title>Virtualizor Admin Panel</title>",
         }
         for application, html in cases.items():
             with self.subTest(application=application):
@@ -75,6 +77,12 @@ class FingerprintTests(unittest.TestCase):
             "TrueNAS": "<title>TrueNAS</title>",
             "Nagios Core": "<title>Nagios Core</title>",
             "3CX": "<title>3CX Phone System Management Console</title>",
+            "Portainer": "<title>Portainer.io</title>",
+            "Proxmox VE": "<title>Proxmox Virtual Environment</title>",
+            "oVirt": '<script src="/ovirt-engine/webadmin/app.js"></script>',
+            "Cockpit": "<title>Cockpit Web Console</title>",
+            "VMware vSphere": "<title>VMware vSphere</title>",
+            "Xen Orchestra": "<title>Xen Orchestra</title>",
         }
         for application, html in cases.items():
             with self.subTest(application=application):
