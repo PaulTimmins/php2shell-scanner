@@ -8,7 +8,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
-from .versions import assess, extract_version, php_header_evidence
+from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
 
 @dataclass
@@ -63,6 +63,22 @@ def _tls_context(verify_tls: bool, legacy: bool = False) -> ssl.SSLContext:
     return context
 
 
+def _request(parsed, port: int, timeout: float, headers: dict[str, str], method: str, path: str,
+             verify_tls: bool, legacy_tls: bool = False, read_limit: int = 1024):
+    if parsed.scheme == "https":
+        connection = http.client.HTTPSConnection(
+            parsed.hostname, port, timeout=timeout, context=_tls_context(verify_tls, legacy_tls)
+        )
+    else:
+        connection = http.client.HTTPConnection(parsed.hostname, port, timeout=timeout)
+    connection.request(method, path, headers=headers)
+    reply = connection.getresponse()
+    body = reply.read(read_limit)
+    result = reply.status, reply.getheaders(), body
+    connection.close()
+    return result
+
+
 def scan(target: str, timeout: float, path: str, host_header: str | None, verify_tls: bool,
          fallback_index: bool = False) -> Result:
     parsed = urlsplit(target)
@@ -75,32 +91,17 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
         headers["Host"] = host_header
     try:
         tls_mode = None
-        if parsed.scheme == "https":
-            def connect(context: ssl.SSLContext) -> tuple[int, list[tuple[str, str]]]:
-                connection = http.client.HTTPSConnection(parsed.hostname, port, timeout=timeout, context=context)
-                connection.request("HEAD", request_path, headers=headers)
-                reply = connection.getresponse()
-                reply.read(1024)
-                pairs = reply.getheaders()
-                status = reply.status
-                connection.close()
-                return status, pairs
-
-            try:
-                response_status, header_pairs = connect(_tls_context(verify_tls))
-            except ssl.SSLError:
-                if verify_tls:
-                    raise
-                response_status, header_pairs = connect(_tls_context(False, legacy=True))
-                tls_mode = "legacy"
-        else:
-            conn = http.client.HTTPConnection(parsed.hostname, port, timeout=timeout)
-            conn.request("HEAD", request_path, headers=headers)
-            response = conn.getresponse()
-            response.read(1024)
-            header_pairs = response.getheaders()
-            response_status = response.status
-            conn.close()
+        try:
+            response_status, header_pairs, _ = _request(
+                parsed, port, timeout, headers, "HEAD", request_path, verify_tls
+            )
+        except ssl.SSLError:
+            if verify_tls or parsed.scheme != "https":
+                raise
+            response_status, header_pairs, _ = _request(
+                parsed, port, timeout, headers, "HEAD", request_path, False, legacy_tls=True
+            )
+            tls_mode = "legacy"
         evidence_values = [value for key, value in header_pairs if key.lower() in {"server", "x-powered-by"}]
         version = extract_version(evidence_values)
         if version is None:
@@ -114,6 +115,22 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                                 reason="no PHP version or positive PHP header evidence", tls_mode=tls_mode,
                                 probe_path=request_path)
             if fallback_index and request_path != "/index.php":
+                if request_path == "/":
+                    try:
+                        _, body_headers, body = _request(
+                            parsed, port, timeout, headers, "GET", "/", verify_tls,
+                            legacy_tls=tls_mode == "legacy", read_limit=65536
+                        )
+                        content_type = next(
+                            (value for name, value in body_headers if name.lower() == "content-type"), None
+                        )
+                        body_evidence = relative_php_url_evidence(body, content_type)
+                        if body_evidence:
+                            return Result(target, "php_unknown", response_status, evidence=body_evidence,
+                                          reason="HTML references a relative PHP endpoint; exact version is hidden",
+                                          tls_mode=tls_mode, probe_path="/")
+                    except (OSError, ssl.SSLError, http.client.HTTPException, ValueError):
+                        pass
                 index_result = scan(target, timeout, "/index.php", host_header, verify_tls, False)
                 exact_statuses = {"outdated", "patched", "not_affected"}
                 if index_result.status in exact_statuses:

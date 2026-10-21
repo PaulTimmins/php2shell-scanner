@@ -7,7 +7,7 @@ from unittest.mock import patch
 from php2shell_scanner.scanner import _tls_context, expand_targets
 from php2shell_scanner.scanner import Result
 from php2shell_scanner.cli import _print_report, parser
-from php2shell_scanner.versions import assess, extract_version, php_header_evidence
+from php2shell_scanner.versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
 
 class VersionTests(unittest.TestCase):
@@ -62,6 +62,18 @@ class VersionTests(unittest.TestCase):
 
     def test_does_not_guess_php_from_generic_headers(self):
         self.assertEqual(php_header_evidence([("Server", "nginx"), ("Set-Cookie", "session=abc")]), [])
+
+    def test_identifies_relative_php_url_in_html(self):
+        body = b'<form action="login.php"><script src="/assets/app.js"></script></form>'
+        self.assertEqual(
+            relative_php_url_evidence(body, "text/html; charset=utf-8"),
+            "relative PHP URL in HTML: login.php",
+        )
+
+    def test_ignores_external_php_url_and_non_html(self):
+        body = b'<a href="https://other.test/login.php">login</a>'
+        self.assertIsNone(relative_php_url_evidence(body, "text/html"))
+        self.assertIsNone(relative_php_url_evidence(b"download.php", "text/plain"))
 
     def test_index_php_fallback_can_identify_php(self):
         from php2shell_scanner.scanner import scan

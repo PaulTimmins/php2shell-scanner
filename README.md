@@ -108,9 +108,11 @@ on port 443. If `--ports` is supplied, every selected scheme is tried on every
 listed port so nonstandard services can still be found.
 
 The default path check starts at `/`. If that does not expose an exact PHP
-version, the scanner also sends a `HEAD` request to `/index.php`. A finding from
-the fallback is labeled `path=/index.php`. Supplying `--path` disables the
-fallback and checks only the requested path.
+version, the scanner reads at most 64 KiB of the root HTML and looks for relative
+`.php` links, script sources, or form actions. That positive application signal
+produces `PHP_UNKNOWN` without probing another path. Otherwise it sends a `HEAD`
+request to `/index.php`; a finding there is labeled `path=/index.php`. Supplying
+`--path` disables both fallbacks and checks only the requested path.
 
 Scan selected HTTPS targets and produce JSON Lines:
 

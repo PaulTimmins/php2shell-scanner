@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import re
+from html import unescape
+from urllib.parse import urlsplit
 from dataclasses import dataclass
 
 
 PHP_VERSION = re.compile(r"(?i)\bPHP(?:/|\s+)(\d+\.\d+\.\d+(?:[-+._a-z0-9]*)?)")
 PHP_TOKEN = re.compile(r"(?i)\bPHP\b")
+HTML_URL = re.compile(r'''(?is)\b(?:href|src|action)\s*=\s*(["'])([^"']+)\1''')
 
 # First upstream releases containing the 21 October 2026 PHP2Shell fixes.
 FIXED_RELEASES = {
@@ -43,6 +46,21 @@ def php_header_evidence(headers: list[tuple[str, str]]) -> list[str]:
         elif lowered.startswith("x-php-"):
             evidence.append(f"{name}: {value}")
     return evidence
+
+
+def relative_php_url_evidence(body: bytes, content_type: str | None) -> str | None:
+    if not content_type or "html" not in content_type.lower():
+        return None
+    text = body.decode("utf-8", errors="replace")
+    for match in HTML_URL.finditer(text):
+        value = unescape(match.group(2).strip())
+        lowered = value.lower()
+        if not value or lowered.startswith(("//", "#", "data:", "javascript:")):
+            continue
+        parsed = urlsplit(value)
+        if not parsed.scheme and not parsed.netloc and parsed.path.lower().endswith(".php"):
+            return f"relative PHP URL in HTML: {value[:200]}"
+    return None
 
 
 def _numeric(version: str) -> tuple[int, int, int] | None:
