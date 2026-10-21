@@ -4,6 +4,7 @@ import http.client
 import ipaddress
 import socket
 import ssl
+import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
@@ -19,6 +20,7 @@ class Result:
     evidence: str | None = None
     reason: str | None = None
     error: str | None = None
+    tls_mode: str | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -48,6 +50,18 @@ def expand_targets(entries: list[str], endpoints: list[tuple[str, int]], max_hos
     return targets
 
 
+def _tls_context(verify_tls: bool, legacy: bool = False) -> ssl.SSLContext:
+    context = ssl.create_default_context() if verify_tls else ssl._create_unverified_context()
+    if legacy:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            context.minimum_version = ssl.TLSVersion.TLSv1
+        context.set_ciphers("DEFAULT:@SECLEVEL=0")
+    return context
+
+
 def scan(target: str, timeout: float, path: str, host_header: str | None, verify_tls: bool) -> Result:
     parsed = urlsplit(target)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
@@ -58,23 +72,41 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
     if host_header:
         headers["Host"] = host_header
     try:
+        tls_mode = None
         if parsed.scheme == "https":
-            context = ssl.create_default_context() if verify_tls else ssl._create_unverified_context()
-            conn = http.client.HTTPSConnection(parsed.hostname, port, timeout=timeout, context=context)
+            def connect(context: ssl.SSLContext) -> tuple[int, list[tuple[str, str]]]:
+                connection = http.client.HTTPSConnection(parsed.hostname, port, timeout=timeout, context=context)
+                connection.request("HEAD", request_path, headers=headers)
+                reply = connection.getresponse()
+                reply.read(1024)
+                pairs = reply.getheaders()
+                status = reply.status
+                connection.close()
+                return status, pairs
+
+            try:
+                response_status, header_pairs = connect(_tls_context(verify_tls))
+            except ssl.SSLError:
+                if verify_tls:
+                    raise
+                response_status, header_pairs = connect(_tls_context(False, legacy=True))
+                tls_mode = "legacy"
         else:
             conn = http.client.HTTPConnection(parsed.hostname, port, timeout=timeout)
-        conn.request("HEAD", request_path, headers=headers)
-        response = conn.getresponse()
-        response.read(1024)
-        header_pairs = response.getheaders()
-        conn.close()
+            conn.request("HEAD", request_path, headers=headers)
+            response = conn.getresponse()
+            response.read(1024)
+            header_pairs = response.getheaders()
+            response_status = response.status
+            conn.close()
         evidence_values = [value for key, value in header_pairs if key.lower() in {"server", "x-powered-by"}]
         version = extract_version(evidence_values)
         if version is None:
-            return Result(target, "unknown", response.status, evidence="; ".join(evidence_values) or None,
-                          reason="no exact PHP version exposed in Server or X-Powered-By headers")
+            return Result(target, "unknown", response_status, evidence="; ".join(evidence_values) or None,
+                          reason="no exact PHP version exposed in Server or X-Powered-By headers", tls_mode=tls_mode)
         verdict = assess(version)
-        return Result(target, verdict.status, response.status, version, "; ".join(evidence_values), verdict.reason)
+        return Result(target, verdict.status, response_status, version, "; ".join(evidence_values), verdict.reason,
+                      tls_mode=tls_mode)
     except (OSError, ssl.SSLError, http.client.HTTPException, ValueError) as exc:
         return Result(target, "unreachable", error=f"{type(exc).__name__}: {exc}")
 

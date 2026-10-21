@@ -123,6 +123,12 @@ TLS certificate verification is disabled by default because certificates on raw 
 ranges are commonly self-signed or issued to DNS names. Use `--verify-tls` when
 scanning named hosts if certificate validation should be enforced.
 
+When an unverified HTTPS connection fails because of an obsolete signature algorithm
+or OpenSSL security level, the scanner automatically retries with legacy TLS
+compatibility. Successful downgraded connections are labeled `[legacy TLS]`. This
+changes only the scanner's client-side TLS policy; the request remains a single
+read-only `HEAD`. `--verify-tls` disables the compatibility retry.
+
 The command exits `1` when any confirmed outdated version is found, `2` for invalid
 arguments, and `0` otherwise. `UNKNOWN` does not mean safe.
 

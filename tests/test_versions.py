@@ -1,6 +1,7 @@
 import unittest
+import ssl
 
-from php2shell_scanner.scanner import expand_targets
+from php2shell_scanner.scanner import _tls_context, expand_targets
 from php2shell_scanner.cli import parser
 from php2shell_scanner.versions import assess, extract_version
 
@@ -9,6 +10,11 @@ class VersionTests(unittest.TestCase):
     def test_tls_verification_is_opt_in(self):
         args = parser().parse_args(["192.0.2.1"])
         self.assertFalse(args.verify_tls)
+
+    def test_legacy_tls_context_is_unverified(self):
+        context = _tls_context(False, legacy=True)
+        self.assertEqual(context.verify_mode, ssl.CERT_NONE)
+        self.assertFalse(context.check_hostname)
 
     def test_assessment_boundaries(self):
         cases = [

@@ -54,13 +54,17 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(result.as_dict(), sort_keys=True))
             else:
                 version = f" PHP/{result.php_version}" if result.php_version else ""
+                tls = " [legacy TLS]" if result.tls_mode == "legacy" else ""
                 detail = result.reason or result.error or ""
-                print(f"{result.status.upper():11} {result.target}{version}  {detail}")
+                print(f"{result.status.upper():11} {result.target}{version}{tls}  {detail}")
     if not args.json:
         counts = Counter(result.status for result in results)
         summary = " ".join(f"{name}={counts[name]}" for name in sorted(counts))
         print(f"\nSummary: scanned={len(results)} {summary}", file=sys.stderr)
         if counts["unknown"]:
             print("Hint: UNKNOWN hosts hid PHP versions or may not run PHP; scan known DNS names/paths for their virtual hosts.", file=sys.stderr)
+        legacy_count = sum(result.tls_mode == "legacy" for result in results)
+        if legacy_count:
+            print(f"Warning: {legacy_count} host(s) required legacy TLS compatibility; upgrade their TLS configuration.", file=sys.stderr)
     return 1 if any(result.status == "outdated" for result in results) else 0
 
