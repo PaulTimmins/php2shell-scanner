@@ -35,7 +35,7 @@ RULES = {
     "FreePBX": (r"\bfreepbx\b", r"/admin/assets/"),
     "VitalPBX": (r"\bvitalpbx\b", r"\bvital pbx\b"),
     "Incredible PBX": (r"\bincredible pbx\b",),
-    "Elastix": (r"\belastix\b", r"/themes/.*elastix"),
+    "Elastix 2/4": (r"\belastix (?:2|4)(?:\.\d+)*\b", r"/themes/.*elastix"),
     "FusionPBX": (r"\bfusionpbx\b", r"/themes/default/.*fusionpbx"),
     "Issabel": (r"\bissabel(?:pbx)?\b", r"/themes/.*issabel"),
     "ZoneMinder": (r"\bzoneminder\b", r"[?&]view=(?:console|montage|watch)\b"),
@@ -49,6 +49,12 @@ RULES = {
     "PBXware": (r"\bpbxware\b",),
     "phpVirtualBox": (r"\bphpvirtualbox\b", r"\bphpvirtualbox(?:version)?="),
     "Virtualizor": (r"\bvirtualizor\b", r"/virtualizor/"),
+    # Retired PHP appliance identities. Seeing these brands is itself a legacy signal.
+    "m0n0wall": (r"\bm0n0wall\b",),
+    "NAS4Free": (r"\bnas4free\b",),
+    "FreeNAS 7": (r"\bfreenas 7(?:\.\d+)*\b",),
+    "trixbox CE": (r"\btrixbox ce\b", r"\btrixbox platform\b"),
+    "AsteriskNOW": (r"\basterisknow\b", r"\basterisk now\b"),
     # Inventory-only products whose primary management interfaces do not prove PHP.
     "Nagios Core": (r"\bnagios core\b", r"/nagios/cgi-bin/", r"/cgi-bin/nagios[0-9]?/"),
     "3CX": (r"\b3cx (?:phone system|web client|management console)\b", r"/webclient/#/"),
@@ -73,9 +79,22 @@ NON_PHP_APPLICATIONS = {
     "Xen Orchestra",
 }
 
+UNSUPPORTED_PHP_APPLICATIONS = {
+    "AsteriskNOW",
+    "Elastix 2/4",
+    "FreeNAS 7",
+    "NAS4Free",
+    "m0n0wall",
+    "trixbox CE",
+}
+
 
 def is_php_application(application: str) -> bool:
     return application not in NON_PHP_APPLICATIONS
+
+
+def is_unsupported_php_application(application: str) -> bool:
+    return application in UNSUPPORTED_PHP_APPLICATIONS
 
 
 def fingerprint_applications(

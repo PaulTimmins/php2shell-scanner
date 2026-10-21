@@ -1,6 +1,10 @@
 import unittest
 
-from php2shell_scanner.fingerprints import fingerprint_applications, is_php_application
+from php2shell_scanner.fingerprints import (
+    fingerprint_applications,
+    is_php_application,
+    is_unsupported_php_application,
+)
 
 
 class FingerprintTests(unittest.TestCase):
@@ -52,7 +56,7 @@ class FingerprintTests(unittest.TestCase):
             "FreePBX": "<title>FreePBX Administration</title>",
             "VitalPBX": "<title>VitalPBX Administration</title>",
             "Incredible PBX": "<title>Incredible PBX</title>",
-            "Elastix": "<title>Elastix</title>",
+            "Elastix 2/4": "<title>Elastix 4.0</title>",
             "FusionPBX": "<title>FusionPBX</title>",
             "Issabel": "<title>IssabelPBX</title>",
             "ZoneMinder": "<title>ZoneMinder Console</title>",
@@ -71,6 +75,19 @@ class FingerprintTests(unittest.TestCase):
             with self.subTest(application=application):
                 self.assert_app(application, html)
                 self.assertTrue(is_php_application(application))
+
+    def test_retired_php_appliance_markers(self):
+        cases = {
+            "m0n0wall": "<title>m0n0wall webGUI</title>",
+            "NAS4Free": "<title>NAS4Free WebGUI</title>",
+            "FreeNAS 7": "<title>FreeNAS 7.2</title>",
+            "trixbox CE": "<title>trixbox CE</title>",
+            "AsteriskNOW": "<title>AsteriskNOW</title>",
+        }
+        for application, html in cases.items():
+            with self.subTest(application=application):
+                self.assert_app(application, html)
+                self.assertTrue(is_unsupported_php_application(application))
 
     def test_non_php_products_are_inventory_only(self):
         cases = {

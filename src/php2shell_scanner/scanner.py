@@ -8,7 +8,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
-from .fingerprints import fingerprint_applications, is_php_application
+from .fingerprints import fingerprint_applications, is_php_application, is_unsupported_php_application
 from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
 
@@ -143,6 +143,16 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                 pass
         application_evidence = fingerprint_applications(all_headers, body, content_type)
         applications = sorted(application_evidence)
+        unsupported = [application for application in applications if is_unsupported_php_application(application)]
+        if unsupported:
+            names = ", ".join(unsupported)
+            return Result(
+                target, "outdated_platform", response_status,
+                evidence=f"retired PHP appliance fingerprint: {names}",
+                reason=f"retired PHP appliance platform identified: {names}", tls_mode=tls_mode,
+                probe_path=request_path, applications=applications,
+                application_evidence=application_evidence,
+            )
         if "OPNsense" in applications:
             legacy_evidence = _opnsense_pre_25_7_signature(
                 parsed, port, timeout, headers, verify_tls, tls_mode == "legacy"

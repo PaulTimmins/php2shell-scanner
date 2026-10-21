@@ -47,6 +47,8 @@ HTML markers. Current fingerprints cover:
 - PHP monitoring consoles: Zabbix, Nagios XI, Icinga Web 2, ZoneMinder,
   LibreNMS, Cacti, Observium, and Pandora FMS.
 - PHP virtualization consoles: phpVirtualBox and Virtualizor.
+- Retired PHP appliance lines: m0n0wall, NAS4Free, FreeNAS 7, Elastix 2/4,
+  trixbox CE, and AsteriskNOW.
 
 Detected names appear as `[apps=...]` in streamed text results, under `applications`
 and `application_evidence` in JSON, and in the final application summary. A recognized
@@ -62,6 +64,13 @@ exit status 1. Its absence does not prove 25.7 or newer, and 25.7 or newer still
 an exact PHP package check before it can be considered fixed. Copyright years and the
 login page's timestamp-derived cache tokens are deliberately ignored.
 
+The retired appliance names above are also one-way red flags. They identify PHP
+management platforms whose original release lines have ended or moved to successor
+products. A match produces `OUTDATED_PLATFORM`; current successor branding such as
+XigmaNAS, Issabel, FreePBX, or pfSense remains a normal PHP fingerprint. A bare
+`Elastix` string is insufficient because later Elastix products used a different
+stack; the scanner requires an Elastix 2/4 version marker or its legacy theme path.
+
 TrueNAS, Nagios Core, 3CX, Portainer, Proxmox VE, oVirt, Cockpit, VMware vSphere,
 and Xen Orchestra are also fingerprinted for inventory, but they do not count as
 PHP evidence. The current TrueNAS WebUI is Angular and nginx proxies its
@@ -74,8 +83,12 @@ patch state.
 
 Implementation references include the official
 [OPNsense core](https://github.com/opnsense/core),
+[m0n0wall historical documentation](https://doc.m0n0.ch/handbook-single/),
+[OPNsense's m0n0wall project history](https://docs.opnsense.org/relations/m0n0wall.html),
+[XigmaNAS project history](https://www.xigmanas.com/wiki/doku.php?id=index),
 [pfSense source](https://github.com/pfsense/pfsense),
 [FreePBX framework](https://github.com/FreePBX/framework),
+[AsteriskNOW succession documentation](https://docs.asterisk.org/About-the-Project/Sangoma-and-Digium-Join-Together-FAQ/),
 [VitalPBX projects](https://github.com/VitalPBX),
 [IssabelPBX source](https://github.com/IssabelFoundation/issabelPBX),
 [FusionPBX source](https://github.com/fusionpbx/fusionpbx),

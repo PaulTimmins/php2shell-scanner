@@ -144,6 +144,36 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(result.status, "outdated_platform")
         self.assertIn("older than 25.7", result.reason)
 
+    def test_retired_php_appliance_marks_outdated_platform(self):
+        from php2shell_scanner.scanner import scan
+
+        class Reply:
+            status = 200
+
+            def read(self, _size):
+                return b"<title>m0n0wall webGUI</title>"
+
+            def getheaders(self):
+                return [("Content-Type", "text/html")]
+
+        class Connection:
+            def __init__(self, *_args, **_kwargs):
+                pass
+
+            def request(self, _method, _path, headers=None):
+                pass
+
+            def getresponse(self):
+                return Reply()
+
+            def close(self):
+                pass
+
+        with patch("php2shell_scanner.scanner.http.client.HTTPConnection", Connection):
+            result = scan("http://192.0.2.1", 1, "/", None, False, fallback_index=True)
+        self.assertEqual(result.status, "outdated_platform")
+        self.assertIn("m0n0wall", result.reason)
+
     def test_expands_cidr(self):
         self.assertEqual(expand_targets(["192.0.2.0/30"], [("http", 80)], 10), [
             "http://192.0.2.1:80/", "http://192.0.2.2:80/"
