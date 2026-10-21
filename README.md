@@ -33,7 +33,23 @@ For distro packages, verify the vendor security notice and installed package cha
 | Debian 13 (trixie) | `php8.4` | `8.4.27-1~deb13u1` |
 | Debian 12 (bookworm) | `php8.2` | `8.2.35-1~deb12u1` |
 | Debian testing/unstable | `php8.4` | Unfixed in the Debian tracker at time checked |
-| CentOS Stream / corresponding RHEL streams | `php` | Vendor lists affected; no fixed RPM or RHSA published at time checked |
+| Ubuntu 26.10 | `php8.5` | `8.5.9-0ubuntu2.1` |
+| Ubuntu 26.04 LTS | `php8.5` | `8.5.4-0ubuntu1.5` |
+| Ubuntu 24.04 LTS | `php8.3` | `8.3.6-0ubuntu0.24.04.13` |
+| Ubuntu 22.04 LTS | `php8.1` | `8.1.2-1ubuntu2.28` |
+| Ubuntu 20.04 LTS (Ubuntu Pro/ESM) | `php7.4` | `7.4.3-4ubuntu2.29+esm5` |
+| Ubuntu 18.04 LTS (Ubuntu Pro/ESM) | `php7.2` | `7.2.24-0ubuntu0.18.04.17+esm14` |
+| Ubuntu 16.04 LTS (Ubuntu Pro/ESM) | `php7.0` | `7.0.33-0ubuntu0.16.04.16+esm22` |
+| Ubuntu 14.04 LTS (Ubuntu Pro/ESM) | `php5` | `5.5.9+dfsg-1ubuntu4.29+esm18` |
+| RHEL / CentOS Stream | `php` and module streams | Affected; no fixed RPM or RHSA published at time checked |
+| AlmaLinux 8, 9, 10 | `php` and module streams | Patch builds in progress; no released fixed package listed at time checked |
+| Rocky Linux 8, 9, 10 | `php` and module streams | No community fixed package advisory located at time checked |
+| Oracle Linux | `php` and module streams | No ELSA for either CVE located at time checked |
+| Amazon Linux 2 | `php` / PHP 8.2 Extra | Fix pending |
+| Amazon Linux 2023 | `php8.2`–`php8.5` | Fix pending; `php8.1` says no fix planned |
+| Amazon Linux 2027 Preview | `php8.5` | Fix pending |
+| SUSE / openSUSE | `php` | SUSE status pending; no fixed package versions listed at time checked |
+| Fedora | `php` | No Fedora advisory or stable fixed package identified at time checked |
 
 Check the complete installed package release locally. Web response headers normally
 show only a value such as `PHP/8.2.35`, so they cannot establish whether a downstream
@@ -44,16 +60,27 @@ backport RPM or DEB is installed.
 dpkg-query -W -f='${Package} ${Version}\n' 'php8.*' 'libapache2-mod-php*' 2>/dev/null
 apt-cache policy php8.2 php8.4
 
+# Ubuntu: compare the complete revision against the row for your release
+ubuntu-security-status
+pro security-status 2>/dev/null || true
+
 # CentOS/RHEL: inspect installed NEVRA and look for both CVEs in the vendor changelog
 rpm -q --qf '%{NAME} %{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}\n' php php-cli php-fpm
 rpm -q --changelog php | grep -E 'CVE-2026-109618|CVE-2026-109619'
 dnf updateinfo info --cves CVE-2026-109618,CVE-2026-109619
+
+# SUSE/openSUSE
+zypper lp --cve CVE-2026-109618
+zypper lp --cve CVE-2026-109619
 ```
 
 Vendor status can change quickly. Recheck the
 [Debian tracker for CVE-2026-109618](https://security-tracker.debian.org/tracker/CVE-2026-109618),
 [Debian tracker for CVE-2026-109619](https://security-tracker.debian.org/tracker/CVE-2026-109619),
-and the corresponding [Red Hat CVE records](https://access.redhat.com/security/cve/cve-2026-109618)
+the [Ubuntu security notice](https://ubuntu.com/security/notices/USN-8948-1),
+[Red Hat CVE records](https://access.redhat.com/security/cve/cve-2026-109618),
+[Amazon Linux advisory](https://explore.alas.aws.amazon.com/CVE-2026-109618.html),
+and [SUSE CVE record](https://www.suse.com/security/cve/CVE-2026-109618.html)
 before using package versions as a compliance gate.
 
 ## Install
