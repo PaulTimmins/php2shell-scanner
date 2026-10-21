@@ -29,12 +29,28 @@ without revealing its version.
 | Root HTML has a relative `.php` `href`, `src`, or form `action` | `PHP_UNKNOWN` | First matching relative URL |
 | `/index.php` returns one of the header or cookie signals above | Corresponding result | Labeled `path=/index.php` |
 
+### Application fingerprints
+
+The capped root response is also checked for product-specific headers, cookies, and
+HTML markers. Current fingerprints cover:
+
+- CMS and publishing: WordPress, Drupal, Joomla, TYPO3, MediaWiki, Moodle, and Craft CMS.
+- CRM and marketing: SuiteCRM, SugarCRM, CiviCRM, and Mautic.
+- Commerce: WooCommerce, Magento, and PrestaShop.
+- Frameworks: Laravel, Symfony, CodeIgniter, CakePHP, and Yii.
+- Applications: Nextcloud, phpMyAdmin, and Roundcube.
+
+Detected names appear as `[apps=...]` in streamed text results, under `applications`
+and `application_evidence` in JSON, and in the final application summary. A recognized
+application is positive evidence of a PHP stack but does not reveal its PHP version,
+so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
+
 The default probe order is:
 
 1. Send `HEAD /` and inspect headers.
-2. If the version remains unknown, send `GET /`, read at most 64 KiB, and inspect
-   HTML URL attributes. External URLs, fragments, JavaScript URLs, and non-HTML
-   bodies are ignored.
+2. Send `GET /`, read at most 64 KiB, and inspect product markers and HTML URL
+   attributes. External URLs, fragments, JavaScript URLs, and non-HTML bodies are
+   ignored for HTML fingerprinting.
 3. If no PHP signal is present, send `HEAD /index.php` and inspect its headers.
 
 An HTTP response from a path ending in `.php` does not by itself prove PHP is in use;

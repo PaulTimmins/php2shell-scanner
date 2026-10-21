@@ -34,6 +34,18 @@ def _print_report(results: list, limit: int) -> None:
         if len(matches) > limit:
             print(f"  ... {len(matches) - limit} more")
 
+    application_hosts = {}
+    for result in results:
+        for application in result.applications or []:
+            application_hosts.setdefault(application, []).append(result.target)
+    if application_hosts:
+        print("\nApplication fingerprints:")
+        for application in sorted(application_hosts):
+            targets = sorted(set(application_hosts[application]))
+            shown = ", ".join(targets[:limit])
+            suffix = f" (+{len(targets) - limit} more)" if len(targets) > limit else ""
+            print(f"  {application} ({len(targets)}): {shown}{suffix}")
+
     unreachable = [result for result in results if result.status == "unreachable"]
     if unreachable:
         error_counts = Counter((result.error or "unknown error").split(":", 1)[0] for result in unreachable)
@@ -101,10 +113,11 @@ def main(argv: list[str] | None = None) -> int:
                 version = f" PHP/{result.php_version}" if result.php_version else ""
                 tls = " [legacy TLS]" if result.tls_mode == "legacy" else ""
                 path = f" [path={result.probe_path}]" if result.probe_path and result.probe_path != "/" else ""
+                applications = f" [apps={','.join(result.applications)}]" if result.applications else ""
                 detail = result.reason or result.error or ""
                 if result.status == "php_unknown" and result.evidence:
                     detail = f"{detail} ({result.evidence})"
-                print(f"{result.status.upper():11} {result.target}{version}{tls}{path}  {detail}")
+                print(f"{result.status.upper():11} {result.target}{version}{tls}{path}{applications}  {detail}")
     if not args.json:
         _print_report(results, max(1, args.report_limit))
     return 1 if any(result.status == "outdated" for result in results) else 0

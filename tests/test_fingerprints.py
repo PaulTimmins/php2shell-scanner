@@ -1,0 +1,61 @@
+import unittest
+
+from php2shell_scanner.fingerprints import fingerprint_applications
+
+
+class FingerprintTests(unittest.TestCase):
+    def assert_app(self, application, html="", headers=None):
+        found = fingerprint_applications(headers or [], html.encode(), "text/html")
+        self.assertIn(application, found)
+
+    def test_cms_and_app_html_markers(self):
+        cases = {
+            "WordPress": '<link href="/wp-content/themes/site/style.css">',
+            "WooCommerce": '<script src="/wp-content/plugins/woocommerce/app.js">',
+            "Drupal": "<script>window.drupalSettings = {};</script>",
+            "Joomla": '<script src="/media/system/js/core.js">',
+            "Magento": '<script>var section = "mage-cache-storage";</script>',
+            "PrestaShop": '<meta name="generator" content="PrestaShop">',
+            "TYPO3": '<meta name="generator" content="TYPO3 CMS">',
+            "MediaWiki": '<meta name="generator" content="MediaWiki 1.45">',
+            "Moodle": '<script src="/theme/yui_combo.php?rollup/3.17"></script>',
+            "Nextcloud": '<meta name="generator" content="Nextcloud">',
+            "phpMyAdmin": '<nav id="pma_navigation"></nav>',
+            "Roundcube": '<title>Roundcube Webmail</title>',
+            "SuiteCRM": '<link href="/themes/SuiteP/css/style.css">',
+            "SugarCRM": '<title>SugarCRM</title>',
+            "CiviCRM": '<a href="/civicrm/contact/view">Contact</a>',
+            "Mautic": '<script src="/media/js/mautic-form.js"></script>',
+            "Craft CMS": '<meta name="generator" content="Craft CMS">',
+        }
+        for application, html in cases.items():
+            with self.subTest(application=application):
+                self.assert_app(application, html)
+
+    def test_framework_header_and_cookie_markers(self):
+        cases = {
+            "Laravel": [("Set-Cookie", "laravel_session=secret; HttpOnly")],
+            "Symfony": [("X-Debug-Token", "abc123")],
+            "CodeIgniter": [("Set-Cookie", "ci_session=secret")],
+            "CakePHP": [("Set-Cookie", "CAKEPHP=secret")],
+            "Yii": [("X-Powered-By", "Yii Framework")],
+        }
+        for application, headers in cases.items():
+            with self.subTest(application=application):
+                self.assert_app(application, headers=headers)
+
+    def test_cookie_evidence_is_redacted(self):
+        found = fingerprint_applications([("Set-Cookie", "laravel_session=topsecret")])
+        self.assertNotIn("topsecret", repr(found))
+
+    def test_generic_page_does_not_match(self):
+        found = fingerprint_applications(
+            [("Server", "nginx"), ("Set-Cookie", "session=abc")],
+            b'<form action="/login"><input name="csrf"></form>',
+            "text/html",
+        )
+        self.assertEqual(found, {})
+
+
+if __name__ == "__main__":
+    unittest.main()

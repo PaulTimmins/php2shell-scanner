@@ -8,6 +8,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
+from .fingerprints import fingerprint_applications
 from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
 
@@ -22,6 +23,8 @@ class Result:
     error: str | None = None
     tls_mode: str | None = None
     probe_path: str | None = None
+    applications: list[str] | None = None
+    application_evidence: dict[str, list[str]] | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -102,35 +105,45 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                 parsed, port, timeout, headers, "HEAD", request_path, False, legacy_tls=True
             )
             tls_mode = "legacy"
-        evidence_values = [value for key, value in header_pairs if key.lower() in {"server", "x-powered-by"}]
+        all_headers = list(header_pairs)
+        body = b""
+        content_type = None
+        if fallback_index and request_path == "/":
+            try:
+                _, body_headers, body = _request(
+                    parsed, port, timeout, headers, "GET", "/", verify_tls,
+                    legacy_tls=tls_mode == "legacy", read_limit=65536
+                )
+                all_headers.extend(body_headers)
+                content_type = next(
+                    (value for name, value in body_headers if name.lower() == "content-type"), None
+                )
+            except (OSError, ssl.SSLError, http.client.HTTPException, ValueError):
+                pass
+        application_evidence = fingerprint_applications(all_headers, body, content_type)
+        applications = sorted(application_evidence)
+        evidence_values = [value for key, value in all_headers if key.lower() in {"server", "x-powered-by"}]
         version = extract_version(evidence_values)
         if version is None:
-            php_evidence = php_header_evidence(header_pairs)
-            if php_evidence:
+            php_evidence = php_header_evidence(all_headers)
+            body_evidence = relative_php_url_evidence(body, content_type)
+            if php_evidence or body_evidence or applications:
+                positive_evidence = php_evidence or ([body_evidence] if body_evidence else [])
+                if applications and not positive_evidence:
+                    positive_evidence = [f"application fingerprint: {', '.join(applications)}"]
                 result = Result(target, "php_unknown", response_status, evidence="; ".join(php_evidence),
                                 reason="PHP identified, but its exact version is hidden", tls_mode=tls_mode,
-                                probe_path=request_path)
+                                probe_path=request_path, applications=applications,
+                                application_evidence=application_evidence)
+                result.evidence = "; ".join(positive_evidence)
             else:
                 result = Result(target, "unknown", response_status, evidence="; ".join(evidence_values) or None,
                                 reason="no PHP version or positive PHP header evidence", tls_mode=tls_mode,
-                                probe_path=request_path)
+                                probe_path=request_path, applications=applications,
+                                application_evidence=application_evidence)
             if fallback_index and request_path != "/index.php":
-                if request_path == "/":
-                    try:
-                        _, body_headers, body = _request(
-                            parsed, port, timeout, headers, "GET", "/", verify_tls,
-                            legacy_tls=tls_mode == "legacy", read_limit=65536
-                        )
-                        content_type = next(
-                            (value for name, value in body_headers if name.lower() == "content-type"), None
-                        )
-                        body_evidence = relative_php_url_evidence(body, content_type)
-                        if body_evidence:
-                            return Result(target, "php_unknown", response_status, evidence=body_evidence,
-                                          reason="HTML references a relative PHP endpoint; exact version is hidden",
-                                          tls_mode=tls_mode, probe_path="/")
-                    except (OSError, ssl.SSLError, http.client.HTTPException, ValueError):
-                        pass
+                if result.status == "php_unknown":
+                    return result
                 index_result = scan(target, timeout, "/index.php", host_header, verify_tls, False)
                 exact_statuses = {"outdated", "patched", "not_affected"}
                 if index_result.status in exact_statuses:
@@ -142,7 +155,8 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
             return result
         verdict = assess(version)
         return Result(target, verdict.status, response_status, version, "; ".join(evidence_values), verdict.reason,
-                      tls_mode=tls_mode, probe_path=request_path)
+                      tls_mode=tls_mode, probe_path=request_path, applications=applications,
+                      application_evidence=application_evidence)
     except (OSError, ssl.SSLError, http.client.HTTPException, ValueError) as exc:
         return Result(target, "unreachable", error=f"{type(exc).__name__}: {exc}")
 
