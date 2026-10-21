@@ -39,11 +39,30 @@ HTML markers. Current fingerprints cover:
 - Commerce: WooCommerce, Magento, and PrestaShop.
 - Frameworks: Laravel, Symfony, CodeIgniter, CakePHP, and Yii.
 - Applications: Nextcloud, phpMyAdmin, and Roundcube.
+- PHP appliances and consoles: OPNsense, pfSense, OpenMediaVault, FreePBX,
+  FusionPBX, Issabel, ZoneMinder, LibreNMS, and Cacti.
 
 Detected names appear as `[apps=...]` in streamed text results, under `applications`
 and `application_evidence` in JSON, and in the final application summary. A recognized
-application is positive evidence of a PHP stack but does not reveal its PHP version,
-so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
+PHP application is positive evidence of a PHP stack but does not reveal its PHP
+version, so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
+
+TrueNAS is also fingerprinted for inventory, but it does not count as PHP evidence.
+The current TrueNAS WebUI is Angular and nginx proxies its API/UI traffic to the
+middleware service. A TrueNAS match therefore stays `UNKNOWN` unless an independent
+PHP signal is present. Other products can bundle optional apps with their own PHP
+runtimes, so appliance identification does not establish the version or patch state.
+
+Implementation references include the official
+[OPNsense core](https://github.com/opnsense/core),
+[pfSense source](https://github.com/pfsense/pfsense),
+[FreePBX framework](https://github.com/FreePBX/framework),
+[FusionPBX source](https://github.com/fusionpbx/fusionpbx),
+[OpenMediaVault prerequisites](https://github.com/openmediavault/openmediavault-docs/blob/master/prerequisites.rst),
+[ZoneMinder Web UI documentation](https://github.com/ZoneMinder/zoneminder/blob/master/docs/web_ui_api.rst),
+[LibreNMS source](https://github.com/librenms/librenms),
+[Cacti source](https://github.com/Cacti/cacti), and the
+[TrueNAS WebUI](https://github.com/truenas/webui).
 
 The default probe order is:
 

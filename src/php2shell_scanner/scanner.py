@@ -8,7 +8,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
-from .fingerprints import fingerprint_applications
+from .fingerprints import fingerprint_applications, is_php_application
 from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
 
@@ -122,15 +122,16 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                 pass
         application_evidence = fingerprint_applications(all_headers, body, content_type)
         applications = sorted(application_evidence)
+        php_applications = [application for application in applications if is_php_application(application)]
         evidence_values = [value for key, value in all_headers if key.lower() in {"server", "x-powered-by"}]
         version = extract_version(evidence_values)
         if version is None:
             php_evidence = php_header_evidence(all_headers)
             body_evidence = relative_php_url_evidence(body, content_type)
-            if php_evidence or body_evidence or applications:
+            if php_evidence or body_evidence or php_applications:
                 positive_evidence = php_evidence or ([body_evidence] if body_evidence else [])
-                if applications and not positive_evidence:
-                    positive_evidence = [f"application fingerprint: {', '.join(applications)}"]
+                if php_applications and not positive_evidence:
+                    positive_evidence = [f"PHP application fingerprint: {', '.join(php_applications)}"]
                 result = Result(target, "php_unknown", response_status, evidence="; ".join(php_evidence),
                                 reason="PHP identified, but its exact version is hidden", tls_mode=tls_mode,
                                 probe_path=request_path, applications=applications,

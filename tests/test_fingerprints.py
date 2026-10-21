@@ -1,6 +1,6 @@
 import unittest
 
-from php2shell_scanner.fingerprints import fingerprint_applications
+from php2shell_scanner.fingerprints import fingerprint_applications, is_php_application
 
 
 class FingerprintTests(unittest.TestCase):
@@ -43,6 +43,27 @@ class FingerprintTests(unittest.TestCase):
         for application, headers in cases.items():
             with self.subTest(application=application):
                 self.assert_app(application, headers=headers)
+
+    def test_php_appliance_markers(self):
+        cases = {
+            "OPNsense": "<title>OPNsense</title>",
+            "pfSense": '<input name="__csrf_magic" value="csrfMagicToken"> pfSense',
+            "OpenMediaVault": "<title>openmediavault Workbench</title>",
+            "FreePBX": "<title>FreePBX Administration</title>",
+            "FusionPBX": "<title>FusionPBX</title>",
+            "Issabel": "<title>IssabelPBX</title>",
+            "ZoneMinder": "<title>ZoneMinder Console</title>",
+            "LibreNMS": "<title>LibreNMS</title>",
+            "Cacti": "<title>Login to Cacti</title>",
+        }
+        for application, html in cases.items():
+            with self.subTest(application=application):
+                self.assert_app(application, html)
+                self.assertTrue(is_php_application(application))
+
+    def test_truenas_is_inventory_only_not_php_evidence(self):
+        self.assert_app("TrueNAS", "<title>TrueNAS</title>")
+        self.assertFalse(is_php_application("TrueNAS"))
 
     def test_cookie_evidence_is_redacted(self):
         found = fingerprint_applications([("Set-Cookie", "laravel_session=topsecret")])

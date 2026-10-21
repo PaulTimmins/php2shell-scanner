@@ -28,7 +28,25 @@ RULES = {
     "CiviCRM": (r"/civicrm/", r"\bCRM\.\$\b"),
     "Mautic": (r"generator[^>]+mautic", r"/media/js/mautic"),
     "Craft CMS": (r"\bcraft_csrf_token=", r"generator[^>]+craft cms"),
+    # Firewalls, PBX systems, storage appliances, and monitoring consoles.
+    "OPNsense": (r"\bopnsense\b", r"/ui/themes/[a-z0-9_-]+/"),
+    "pfSense": (r"\bpfsense\b", r"\bcsrfmagictoken\b", r"/themes/pfsense/"),
+    "OpenMediaVault": (r"\bopenmediavault\b", r"\bomv\.workspace\b"),
+    "FreePBX": (r"\bfreepbx\b", r"/admin/assets/"),
+    "FusionPBX": (r"\bfusionpbx\b", r"/themes/default/.*fusionpbx"),
+    "Issabel": (r"\bissabel(?:pbx)?\b", r"/themes/.*issabel"),
+    "ZoneMinder": (r"\bzoneminder\b", r"[?&]view=(?:console|montage|watch)\b"),
+    "LibreNMS": (r"\blibrenms\b", r"\blnms\b"),
+    "Cacti": (r"\blogin to cacti\b", r"\bcacti(?:version)?\b"),
+    # Inventory-only: current TrueNAS management UI is Angular/middleware, not PHP.
+    "TrueNAS": (r"\btruenas\b", r"\bixsystems\b.*\btruenas\b"),
 }
+
+NON_PHP_APPLICATIONS = {"TrueNAS"}
+
+
+def is_php_application(application: str) -> bool:
+    return application not in NON_PHP_APPLICATIONS
 
 
 def fingerprint_applications(
