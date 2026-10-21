@@ -33,16 +33,27 @@ RULES = {
     "pfSense": (r"\bpfsense\b", r"\bcsrfmagictoken\b", r"/themes/pfsense/"),
     "OpenMediaVault": (r"\bopenmediavault\b", r"\bomv\.workspace\b"),
     "FreePBX": (r"\bfreepbx\b", r"/admin/assets/"),
+    "VitalPBX": (r"\bvitalpbx\b", r"\bvital pbx\b"),
+    "Incredible PBX": (r"\bincredible pbx\b",),
+    "Elastix": (r"\belastix\b", r"/themes/.*elastix"),
     "FusionPBX": (r"\bfusionpbx\b", r"/themes/default/.*fusionpbx"),
     "Issabel": (r"\bissabel(?:pbx)?\b", r"/themes/.*issabel"),
     "ZoneMinder": (r"\bzoneminder\b", r"[?&]view=(?:console|montage|watch)\b"),
     "LibreNMS": (r"\blibrenms\b", r"\blnms\b"),
     "Cacti": (r"\blogin to cacti\b", r"\bcacti(?:version)?\b"),
-    # Inventory-only: current TrueNAS management UI is Angular/middleware, not PHP.
+    "Zabbix": (r"\bzabbix\b", r"\bzbx_session="),
+    "Nagios XI": (r"\bnagios xi\b", r"/nagiosxi/", r"\bnagiosxi="),
+    "Icinga Web 2": (r"\bicinga web 2\b", r"/icingaweb2/", r"\bicingaweb2="),
+    "Observium": (r"\bobservium\b", r"/observium/"),
+    "Pandora FMS": (r"\bpandora fms\b", r"/pandora_console/"),
+    "PBXware": (r"\bpbxware\b",),
+    # Inventory-only products whose primary management interfaces do not prove PHP.
+    "Nagios Core": (r"\bnagios core\b", r"/nagios/cgi-bin/", r"/cgi-bin/nagios[0-9]?/"),
+    "3CX": (r"\b3cx (?:phone system|web client|management console)\b", r"/webclient/#/"),
     "TrueNAS": (r"\btruenas\b", r"\bixsystems\b.*\btruenas\b"),
 }
 
-NON_PHP_APPLICATIONS = {"TrueNAS"}
+NON_PHP_APPLICATIONS = {"3CX", "Nagios Core", "TrueNAS"}
 
 
 def is_php_application(application: str) -> bool:

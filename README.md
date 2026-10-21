@@ -39,29 +39,43 @@ HTML markers. Current fingerprints cover:
 - Commerce: WooCommerce, Magento, and PrestaShop.
 - Frameworks: Laravel, Symfony, CodeIgniter, CakePHP, and Yii.
 - Applications: Nextcloud, phpMyAdmin, and Roundcube.
-- PHP appliances and consoles: OPNsense, pfSense, OpenMediaVault, FreePBX,
-  FusionPBX, Issabel, ZoneMinder, LibreNMS, and Cacti.
+- PHP appliances and PBX consoles: OPNsense, pfSense, OpenMediaVault, FreePBX,
+  VitalPBX, Incredible PBX, Elastix, FusionPBX, Issabel, and PBXware.
+- PHP monitoring consoles: Zabbix, Nagios XI, Icinga Web 2, ZoneMinder,
+  LibreNMS, Cacti, Observium, and Pandora FMS.
 
 Detected names appear as `[apps=...]` in streamed text results, under `applications`
 and `application_evidence` in JSON, and in the final application summary. A recognized
 PHP application is positive evidence of a PHP stack but does not reveal its PHP
 version, so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
 
-TrueNAS is also fingerprinted for inventory, but it does not count as PHP evidence.
-The current TrueNAS WebUI is Angular and nginx proxies its API/UI traffic to the
-middleware service. A TrueNAS match therefore stays `UNKNOWN` unless an independent
-PHP signal is present. Other products can bundle optional apps with their own PHP
-runtimes, so appliance identification does not establish the version or patch state.
+TrueNAS, Nagios Core, and 3CX are also fingerprinted for inventory, but they do not
+count as PHP evidence. The current TrueNAS WebUI is Angular and nginx proxies its
+API/UI traffic to the middleware service. Nagios Core's classic interface uses CGI,
+while Nagios XI adds a PHP frontend. 3CX's web client is Angular and its server has
+used .NET Core; a 3CX match does not demonstrate a PHP runtime. These matches stay
+`UNKNOWN` unless an independent PHP signal is present. Products can bundle optional
+apps with separate PHP runtimes, so identification does not establish the version or
+patch state.
 
 Implementation references include the official
 [OPNsense core](https://github.com/opnsense/core),
 [pfSense source](https://github.com/pfsense/pfsense),
 [FreePBX framework](https://github.com/FreePBX/framework),
+[VitalPBX projects](https://github.com/VitalPBX),
+[IssabelPBX source](https://github.com/IssabelFoundation/issabelPBX),
 [FusionPBX source](https://github.com/fusionpbx/fusionpbx),
 [OpenMediaVault prerequisites](https://github.com/openmediavault/openmediavault-docs/blob/master/prerequisites.rst),
 [ZoneMinder Web UI documentation](https://github.com/ZoneMinder/zoneminder/blob/master/docs/web_ui_api.rst),
 [LibreNMS source](https://github.com/librenms/librenms),
-[Cacti source](https://github.com/Cacti/cacti), and the
+[Cacti source](https://github.com/Cacti/cacti),
+[Zabbix frontend documentation](https://www.zabbix.com/documentation/current/en/manual/installation/frontend),
+[Nagios training documentation](https://assets.nagios.com/training/selfpaced/materials/NCP_Core_Prep_Guide.pdf),
+[Icinga Web documentation](https://icinga.com/docs/icinga-web/latest/),
+[Observium requirements](https://docs.observium.org/software_requirements/),
+[Pandora FMS requirements](https://www.pandorafms.com/manual/!current/en/documentation/pandorafms/installation/01_installing),
+[PBXware release documentation](https://www.bicomsystems.com/files/public/Changelog_PBXware_8.0.0.1.pdf),
+[3CX Web Client documentation](https://www.3cx.com/blog/releases/web-based-voip-client/), and the
 [TrueNAS WebUI](https://github.com/truenas/webui).
 
 The default probe order is:

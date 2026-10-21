@@ -50,20 +50,36 @@ class FingerprintTests(unittest.TestCase):
             "pfSense": '<input name="__csrf_magic" value="csrfMagicToken"> pfSense',
             "OpenMediaVault": "<title>openmediavault Workbench</title>",
             "FreePBX": "<title>FreePBX Administration</title>",
+            "VitalPBX": "<title>VitalPBX Administration</title>",
+            "Incredible PBX": "<title>Incredible PBX</title>",
+            "Elastix": "<title>Elastix</title>",
             "FusionPBX": "<title>FusionPBX</title>",
             "Issabel": "<title>IssabelPBX</title>",
             "ZoneMinder": "<title>ZoneMinder Console</title>",
             "LibreNMS": "<title>LibreNMS</title>",
             "Cacti": "<title>Login to Cacti</title>",
+            "Zabbix": "<title>Zabbix</title>",
+            "Nagios XI": '<link href="/nagiosxi/includes/css/base.css">',
+            "Icinga Web 2": "<title>Icinga Web 2</title>",
+            "Observium": "<title>Observium</title>",
+            "Pandora FMS": '<form action="/pandora_console/index.php">',
+            "PBXware": "<title>PBXware by Bicom Systems</title>",
         }
         for application, html in cases.items():
             with self.subTest(application=application):
                 self.assert_app(application, html)
                 self.assertTrue(is_php_application(application))
 
-    def test_truenas_is_inventory_only_not_php_evidence(self):
-        self.assert_app("TrueNAS", "<title>TrueNAS</title>")
-        self.assertFalse(is_php_application("TrueNAS"))
+    def test_non_php_products_are_inventory_only(self):
+        cases = {
+            "TrueNAS": "<title>TrueNAS</title>",
+            "Nagios Core": "<title>Nagios Core</title>",
+            "3CX": "<title>3CX Phone System Management Console</title>",
+        }
+        for application, html in cases.items():
+            with self.subTest(application=application):
+                self.assert_app(application, html)
+                self.assertFalse(is_php_application(application))
 
     def test_cookie_evidence_is_redacted(self):
         found = fingerprint_applications([("Set-Cookie", "laravel_session=topsecret")])
