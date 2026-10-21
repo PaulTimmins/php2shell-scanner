@@ -89,6 +89,13 @@ title, footer, or framework error page. Branding without an exact version remain
 release, so the scanner inventories those products without guessing from copyright
 years, asset dates, or other weak proxies.
 
+PBXware has one additional one-way check for releases that hide their version. The
+old table-based login tree references `images/login/login_bg.gif`, `login_u1.gif`,
+and `login_button.gif` together. That complete product-specific asset set produces
+`OUTDATED_PLATFORM` because these installations bundle PHP inside the PBXware chroot
+and require a supported PBXware release to receive a normal vendor PHP update. A
+modern PBXware login or a partial/generic image match does not trigger the rule.
+
 For an OPNsense root-page match, the scanner makes one additional capped `GET` for
 `/ui/css/pick-a-color-1.2.3.min.css`. OPNsense 25.1 shipped this file and 25.7 removed
 it while replacing the JavaScript color picker with native color inputs. The response

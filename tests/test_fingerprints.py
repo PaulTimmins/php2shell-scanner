@@ -5,6 +5,7 @@ from php2shell_scanner.fingerprints import (
     fingerprint_applications,
     is_php_application,
     is_unsupported_php_application,
+    legacy_pbxware_web_ui,
     legacy_application_version,
 )
 
@@ -166,6 +167,16 @@ class FingerprintTests(unittest.TestCase):
         self.assertIsNone(legacy_application_version({"PBXware": "7.6.4.2"}))
         self.assertIsNone(legacy_application_version({"SuiteCRM": "7.15.1"}))
         self.assertIsNone(legacy_application_version({"SuiteCRM": "8.10.0"}))
+
+    def test_legacy_pbxware_login_asset_set(self):
+        old_login = b"""
+            <title>Welcome to PBXware - Authorization required</title>
+            images/login/login_bg.gif images/login/login_u1.gif
+            images/login/login_button.gif
+        """
+        self.assertIsNotNone(legacy_pbxware_web_ui(old_login, "text/html"))
+        self.assertIsNone(legacy_pbxware_web_ui(b"<title>PBXware</title>", "text/html"))
+        self.assertIsNone(legacy_pbxware_web_ui(old_login, "text/plain"))
 
 
 if __name__ == "__main__":

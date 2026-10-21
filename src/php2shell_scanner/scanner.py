@@ -13,6 +13,7 @@ from .fingerprints import (
     fingerprint_applications,
     is_php_application,
     is_unsupported_php_application,
+    legacy_pbxware_web_ui,
     legacy_application_version,
 )
 from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
@@ -153,6 +154,15 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
         application_versions = fingerprint_application_versions(
             applications, all_headers, body, content_type
         )
+        pbxware_legacy_evidence = legacy_pbxware_web_ui(body, content_type)
+        if "PBXware" in applications and pbxware_legacy_evidence:
+            application_evidence["PBXware"].append(pbxware_legacy_evidence)
+            return Result(
+                target, "outdated_platform", response_status, evidence=pbxware_legacy_evidence,
+                reason="legacy unsupported PBXware web tree identified; bundled PHP requires a supported PBXware release",
+                tls_mode=tls_mode, probe_path=request_path, applications=applications,
+                application_evidence=application_evidence, application_versions=application_versions,
+            )
         legacy_application = legacy_application_version(application_versions)
         if legacy_application:
             application, application_version, boundary = legacy_application

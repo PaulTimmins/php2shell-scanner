@@ -138,6 +138,21 @@ def is_unsupported_php_application(application: str) -> bool:
     return application in UNSUPPORTED_PHP_APPLICATIONS
 
 
+def legacy_pbxware_web_ui(body: bytes, content_type: str | None) -> str | None:
+    """Identify the old table/GIF PBXware login tree without assigning a version."""
+    if not content_type or "html" not in content_type.lower():
+        return None
+    lowered = body.lower()
+    markers = (
+        b"images/login/login_bg.gif",
+        b"images/login/login_u1.gif",
+        b"images/login/login_button.gif",
+    )
+    if b"pbxware" in lowered and all(marker in lowered for marker in markers):
+        return "legacy PBXware table/GIF login asset set"
+    return None
+
+
 def fingerprint_application_versions(
     applications: list[str], headers: list[tuple[str, str]], body: bytes = b"",
     content_type: str | None = None,
