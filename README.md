@@ -55,6 +55,20 @@ and `application_evidence` in JSON, and in the final application summary. A reco
 PHP application is positive evidence of a PHP stack but does not reveal its PHP
 version, so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
 
+When ordinary response HTML exposes an exact product version, the scanner checks
+conservative upstream PHP 8 compatibility boundaries. These versions produce
+`OUTDATED_PLATFORM`: WordPress before 5.6, Nextcloud before 21, Zabbix before 6.0,
+Cacti before 1.2.20, LibreNMS before 21.1, Laravel before 6, and phpMyAdmin before 5.
+The finding records the observed product version and its boundary. It means the
+application release predates its project's PHP 8 compatible line; it does not claim
+to have measured the installed PHP runtime.
+
+The version must appear in product-qualified text such as a generator meta tag,
+title, footer, or framework error page. Branding without an exact version remains
+`PHP_UNKNOWN`. pfSense, FreePBX, PBXware, and similar login pages often hide their
+release, so the scanner inventories those products without guessing from copyright
+years, asset dates, or other weak proxies.
+
 For an OPNsense root-page match, the scanner makes one additional capped `GET` for
 `/ui/css/pick-a-color-1.2.3.min.css`. OPNsense 25.1 shipped this file and 25.7 removed
 it while replacing the JavaScript color picker with native color inputs. The response
@@ -88,6 +102,12 @@ Implementation references include the official
 [XigmaNAS project history](https://www.xigmanas.com/wiki/doku.php?id=index),
 [pfSense source](https://github.com/pfsense/pfsense),
 [FreePBX framework](https://github.com/FreePBX/framework),
+[WordPress PHP compatibility](https://make.wordpress.org/core/handbook/references/php-compatibility-and-wordpress-versions/),
+[Nextcloud 21 PHP 8 release notes](https://docs.nextcloud.com/server/stable/developer_manual/release_notes/previous/upgrade_to_21.html),
+[Zabbix 5.4 requirements](https://www.zabbix.com/documentation/5.4/en/manual/installation/requirements),
+[Cacti PHP 8 milestone](https://github.com/Cacti/cacti/issues/4551),
+[LibreNMS PHP 8 compatibility change](https://github.com/librenms/librenms/commit/39217d003ffcc730fa7186255de7e553f4ac2cdf),
+[Laravel PHP 8 support](https://laravel.com/blog/laravel-php-8-support),
 [AsteriskNOW succession documentation](https://docs.asterisk.org/About-the-Project/Sangoma-and-Digium-Join-Together-FAQ/),
 [VitalPBX projects](https://github.com/VitalPBX),
 [IssabelPBX source](https://github.com/IssabelFoundation/issabelPBX),

@@ -115,6 +115,13 @@ def main(argv: list[str] | None = None) -> int:
                 tls = " [legacy TLS]" if result.tls_mode == "legacy" else ""
                 path = f" [path={result.probe_path}]" if result.probe_path and result.probe_path != "/" else ""
                 applications = f" [apps={','.join(result.applications)}]" if result.applications else ""
+                if result.application_versions:
+                    rendered = ",".join(
+                        f"{name}/{result.application_versions[name]}"
+                        if name in result.application_versions else name
+                        for name in result.applications or []
+                    )
+                    applications = f" [apps={rendered}]"
                 detail = result.reason or result.error or ""
                 if result.status == "php_unknown" and result.evidence:
                     detail = f"{detail} ({result.evidence})"

@@ -10,7 +10,7 @@ RULES = {
     "WooCommerce": (r"/wp-content/plugins/woocommerce/", r"\bwoocommerce_(?:cart_hash|items_in_cart)="),
     "Drupal": (r"generator[^>]+drupal", r"\bdrupalSettings\b", r"/sites/default/files/"),
     "Joomla": (r"generator[^>]+joomla", r"/media/system/js/", r"[?&]option=com_[a-z0-9_]+"),
-    "Laravel": (r"\blaravel_session=", r"x-powered-by:\s*laravel\b"),
+    "Laravel": (r"\blaravel_session=", r"x-powered-by:\s*laravel\b", r"\blaravel(?: framework)? v[0-9]+"),
     "Symfony": (r"x-debug-token(?:-link)?:", r"/(?:_wdt|_profiler)/"),
     "CodeIgniter": (r"\bci_session=", r"x-powered-by:\s*codeigniter\b"),
     "CakePHP": (r"\bcakephp=", r"x-powered-by:\s*cakephp\b"),
@@ -88,6 +88,30 @@ UNSUPPORTED_PHP_APPLICATIONS = {
     "trixbox CE",
 }
 
+# Conservative first releases whose upstream projects support PHP 8.  These
+# rules only run when an exact application version is present in the response.
+PHP8_APPLICATION_MINIMUMS = {
+    "Cacti": (1, 2, 20),
+    "Laravel": (6,),
+    "LibreNMS": (21, 1),
+    "Nextcloud": (21,),
+    "WordPress": (5, 6),
+    "Zabbix": (6,),
+    # The 5.x line is the conservative boundary. Some late 4.x builds can be
+    # made to work, but upstream did not document the whole line for PHP 8.
+    "phpMyAdmin": (5,),
+}
+
+VERSION_PATTERNS = {
+    "Cacti": (r"\bcacti(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "Laravel": (r"\blaravel(?:\s+framework)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "LibreNMS": (r"\blibrenms(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "Nextcloud": (r"generator[^>]+nextcloud(?:\s+|/)([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "WordPress": (r"generator[^>]+wordpress(?:\s+|/)([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "Zabbix": (r"\bzabbix(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "phpMyAdmin": (r"\bphpmyadmin(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+}
+
 
 def is_php_application(application: str) -> bool:
     return application not in NON_PHP_APPLICATIONS
@@ -95,6 +119,39 @@ def is_php_application(application: str) -> bool:
 
 def is_unsupported_php_application(application: str) -> bool:
     return application in UNSUPPORTED_PHP_APPLICATIONS
+
+
+def fingerprint_application_versions(
+    applications: list[str], headers: list[tuple[str, str]], body: bytes = b"",
+    content_type: str | None = None,
+) -> dict[str, str]:
+    """Extract exact, product-qualified versions from an ordinary response."""
+    header_text = "\n".join(f"{name}: {value}" for name, value in headers)
+    body_text = body.decode("utf-8", errors="replace") if content_type and "html" in content_type.lower() else ""
+    searchable = f"{header_text}\n{body_text}"
+    found = {}
+    for application in applications:
+        for pattern in VERSION_PATTERNS.get(application, ()):
+            match = re.search(pattern, searchable, re.IGNORECASE)
+            if match:
+                found[application] = match.group(1)
+                break
+    return found
+
+
+def pre_php8_application(application_versions: dict[str, str]) -> tuple[str, str, str] | None:
+    """Return the first app version below its defensible PHP 8 boundary."""
+    for application in sorted(application_versions):
+        minimum = PHP8_APPLICATION_MINIMUMS.get(application)
+        if not minimum:
+            continue
+        version = application_versions[application]
+        parts = tuple(int(value) for value in re.findall(r"\d+", version))
+        width = max(len(parts), len(minimum))
+        if parts + (0,) * (width - len(parts)) < minimum + (0,) * (width - len(minimum)):
+            boundary = ".".join(str(value) for value in minimum)
+            return application, version, boundary
+    return None
 
 
 def fingerprint_applications(

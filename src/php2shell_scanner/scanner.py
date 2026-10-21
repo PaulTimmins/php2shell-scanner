@@ -8,7 +8,13 @@ import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
-from .fingerprints import fingerprint_applications, is_php_application, is_unsupported_php_application
+from .fingerprints import (
+    fingerprint_application_versions,
+    fingerprint_applications,
+    is_php_application,
+    is_unsupported_php_application,
+    pre_php8_application,
+)
 from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
 
@@ -25,6 +31,7 @@ class Result:
     probe_path: str | None = None
     applications: list[str] | None = None
     application_evidence: dict[str, list[str]] | None = None
+    application_versions: dict[str, str] | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -143,6 +150,20 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                 pass
         application_evidence = fingerprint_applications(all_headers, body, content_type)
         applications = sorted(application_evidence)
+        application_versions = fingerprint_application_versions(
+            applications, all_headers, body, content_type
+        )
+        legacy_application = pre_php8_application(application_versions)
+        if legacy_application:
+            application, application_version, boundary = legacy_application
+            evidence = f"{application}/{application_version} (PHP 8 support starts at {boundary})"
+            application_evidence[application].append(evidence)
+            return Result(
+                target, "outdated_platform", response_status, evidence=evidence,
+                reason=f"{application} {application_version} predates its PHP 8 compatible release line",
+                tls_mode=tls_mode, probe_path=request_path, applications=applications,
+                application_evidence=application_evidence, application_versions=application_versions,
+            )
         unsupported = [application for application in applications if is_unsupported_php_application(application)]
         if unsupported:
             names = ", ".join(unsupported)
@@ -152,6 +173,7 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                 reason=f"retired PHP appliance platform identified: {names}", tls_mode=tls_mode,
                 probe_path=request_path, applications=applications,
                 application_evidence=application_evidence,
+                application_versions=application_versions,
             )
         if "OPNsense" in applications:
             legacy_evidence = _opnsense_pre_25_7_signature(
@@ -164,6 +186,7 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                     reason="OPNsense web tree is older than 25.7 and cannot receive the required PHP fix",
                     tls_mode=tls_mode, probe_path=request_path, applications=applications,
                     application_evidence=application_evidence,
+                    application_versions=application_versions,
                 )
         php_applications = [application for application in applications if is_php_application(application)]
         evidence_values = [value for key, value in all_headers if key.lower() in {"server", "x-powered-by"}]
@@ -179,12 +202,14 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                                 reason="PHP identified, but its exact version is hidden", tls_mode=tls_mode,
                                 probe_path=request_path, applications=applications,
                                 application_evidence=application_evidence)
+                result.application_versions = application_versions
                 result.evidence = "; ".join(positive_evidence)
             else:
                 result = Result(target, "unknown", response_status, evidence="; ".join(evidence_values) or None,
                                 reason="no PHP version or positive PHP header evidence", tls_mode=tls_mode,
                                 probe_path=request_path, applications=applications,
                                 application_evidence=application_evidence)
+                result.application_versions = application_versions
             if fallback_index and request_path != "/index.php":
                 if result.status == "php_unknown":
                     return result
@@ -200,7 +225,9 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
         verdict = assess(version)
         return Result(target, verdict.status, response_status, version, "; ".join(evidence_values), verdict.reason,
                       tls_mode=tls_mode, probe_path=request_path, applications=applications,
-                      application_evidence=application_evidence)
+                      application_evidence=application_evidence,
+                      application_versions=application_versions)
+
     except (OSError, ssl.SSLError, http.client.HTTPException, ValueError) as exc:
         return Result(target, "unreachable", error=f"{type(exc).__name__}: {exc}")
 

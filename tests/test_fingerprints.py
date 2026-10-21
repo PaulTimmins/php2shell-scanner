@@ -1,9 +1,11 @@
 import unittest
 
 from php2shell_scanner.fingerprints import (
+    fingerprint_application_versions,
     fingerprint_applications,
     is_php_application,
     is_unsupported_php_application,
+    pre_php8_application,
 )
 
 
@@ -126,6 +128,30 @@ class FingerprintTests(unittest.TestCase):
         )
         self.assertIn("Cacti", found)
         self.assertNotIn("pfSense", found)
+
+    def test_extracts_product_qualified_versions(self):
+        cases = {
+            "WordPress": '<meta name="generator" content="WordPress 5.5.15">',
+            "Nextcloud": '<meta name="generator" content="Nextcloud 20.0.14">',
+            "Cacti": '<title>Login to Cacti</title><span>Cacti Version 1.2.19</span>',
+            "LibreNMS": '<title>LibreNMS</title><footer>LibreNMS 20.12.0</footer>',
+            "Zabbix": '<title>Zabbix 5.4.12</title>',
+            "Laravel": '<h1>Laravel v5.8.38</h1>',
+            "phpMyAdmin": '<title>phpMyAdmin 4.9.11</title>',
+        }
+        for application, html in cases.items():
+            with self.subTest(application=application):
+                applications = list(fingerprint_applications([], html.encode(), "text/html"))
+                versions = fingerprint_application_versions(
+                    applications, [], html.encode(), "text/html"
+                )
+                self.assertIn(application, versions)
+                self.assertEqual(pre_php8_application(versions)[0], application)
+
+    def test_supported_release_is_not_a_pre_php8_signal(self):
+        self.assertIsNone(pre_php8_application({"Cacti": "1.2.20"}))
+        self.assertIsNone(pre_php8_application({"WordPress": "5.6"}))
+        self.assertIsNone(pre_php8_application({"LibreNMS": "21.1.0"}))
 
 
 if __name__ == "__main__":
