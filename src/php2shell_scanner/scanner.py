@@ -82,6 +82,27 @@ def _request(parsed, port: int, timeout: float, headers: dict[str, str], method:
     return result
 
 
+def _opnsense_pre_25_7_signature(parsed, port: int, timeout: float, headers: dict[str, str],
+                                  verify_tls: bool, legacy_tls: bool) -> str | None:
+    """Return evidence for an OPNsense static asset removed at the 25.7 boundary."""
+    path = "/ui/css/pick-a-color-1.2.3.min.css"
+    try:
+        status, response_headers, body = _request(
+            parsed, port, timeout, headers, "GET", path, verify_tls,
+            legacy_tls=legacy_tls, read_limit=4096
+        )
+    except (OSError, ssl.SSLError, http.client.HTTPException, ValueError):
+        return None
+    content_type = next(
+        (value for name, value in response_headers if name.lower() == "content-type"), ""
+    ).lower()
+    if status == 200 and ("css" in content_type or not content_type):
+        lowered = body.lower()
+        if b".pick-a-color-markup" in lowered and b".hex-pound" in lowered:
+            return f"legacy OPNsense asset present: {path}"
+    return None
+
+
 def scan(target: str, timeout: float, path: str, host_header: str | None, verify_tls: bool,
          fallback_index: bool = False) -> Result:
     parsed = urlsplit(target)
@@ -122,6 +143,18 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
                 pass
         application_evidence = fingerprint_applications(all_headers, body, content_type)
         applications = sorted(application_evidence)
+        if "OPNsense" in applications:
+            legacy_evidence = _opnsense_pre_25_7_signature(
+                parsed, port, timeout, headers, verify_tls, tls_mode == "legacy"
+            )
+            if legacy_evidence:
+                application_evidence["OPNsense"].append(legacy_evidence)
+                return Result(
+                    target, "outdated_platform", response_status, evidence=legacy_evidence,
+                    reason="OPNsense web tree is older than 25.7 and cannot receive the required PHP fix",
+                    tls_mode=tls_mode, probe_path=request_path, applications=applications,
+                    application_evidence=application_evidence,
+                )
         php_applications = [application for application in applications if is_php_application(application)]
         evidence_values = [value for key, value in all_headers if key.lower() in {"server", "x-powered-by"}]
         version = extract_version(evidence_values)

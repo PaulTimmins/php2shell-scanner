@@ -15,6 +15,7 @@ def _print_report(results: list, limit: int) -> None:
     print(f"\nReport: scanned={len(results)} {summary}")
 
     sections = [
+        ("Outdated PHP platforms", lambda result: result.status == "outdated_platform"),
         ("Outdated PHP", lambda result: result.status == "outdated"),
         ("PHP version hidden", lambda result: result.status == "php_unknown"),
         ("Patched PHP", lambda result: result.status == "patched"),
@@ -120,5 +121,5 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{result.status.upper():11} {result.target}{version}{tls}{path}{applications}  {detail}")
     if not args.json:
         _print_report(results, max(1, args.report_limit))
-    return 1 if any(result.status == "outdated" for result in results) else 0
+    return 1 if any(result.status in {"outdated", "outdated_platform"} for result in results) else 0
 

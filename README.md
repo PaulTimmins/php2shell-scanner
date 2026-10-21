@@ -8,6 +8,8 @@ payload, multipart upload, large allocation, session mutation, or file write.
 ## What a result means
 
 - `OUTDATED`: the server exposed an exact PHP version below its upstream fixed release.
+- `OUTDATED_PLATFORM`: a passive platform signature proves the appliance branch cannot
+  receive the required PHP fix. This currently applies to OPNsense releases before 25.7.
 - `PATCHED`: the exposed version is at or above the upstream fixed release.
 - `PHP_UNKNOWN`: PHP is positively identified by a header or `PHPSESSID` cookie, but
   its exact version is hidden. Check the installed package locally.
@@ -28,6 +30,7 @@ without revealing its version.
 | Response includes an `X-PHP-*` header | `PHP_UNKNOWN` | Header name and value |
 | Root HTML has a relative `.php` `href`, `src`, or form `action` | `PHP_UNKNOWN` | First matching relative URL |
 | `/index.php` returns one of the header or cookie signals above | Corresponding result | Labeled `path=/index.php` |
+| OPNsense serves its retired Pick-a-Color 1.2.3 CSS asset | `OUTDATED_PLATFORM` | OPNsense web tree predates 25.7 |
 
 ### Application fingerprints
 
@@ -49,6 +52,15 @@ Detected names appear as `[apps=...]` in streamed text results, under `applicati
 and `application_evidence` in JSON, and in the final application summary. A recognized
 PHP application is positive evidence of a PHP stack but does not reveal its PHP
 version, so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
+
+For an OPNsense root-page match, the scanner makes one additional capped `GET` for
+`/ui/css/pick-a-color-1.2.3.min.css`. OPNsense 25.1 shipped this file and 25.7 removed
+it while replacing the JavaScript color picker with native color inputs. The response
+must contain two library-specific CSS selectors, so a generic login-page response at
+that path does not match. A confirmed legacy asset produces `OUTDATED_PLATFORM` and
+exit status 1. Its absence does not prove 25.7 or newer, and 25.7 or newer still needs
+an exact PHP package check before it can be considered fixed. Copyright years and the
+login page's timestamp-derived cache tokens are deliberately ignored.
 
 TrueNAS, Nagios Core, 3CX, Portainer, Proxmox VE, oVirt, Cockpit, VMware vSphere,
 and Xen Orchestra are also fingerprinted for inventory, but they do not count as
@@ -91,7 +103,8 @@ The default probe order is:
 2. Send `GET /`, read at most 64 KiB, and inspect product markers and HTML URL
    attributes. External URLs, fragments, JavaScript URLs, and non-HTML bodies are
    ignored for HTML fingerprinting.
-3. If no PHP signal is present, send `HEAD /index.php` and inspect its headers.
+3. If OPNsense is identified, check the capped legacy static asset described above.
+4. If no PHP signal is present, send `HEAD /index.php` and inspect its headers.
 
 An HTTP response from a path ending in `.php` does not by itself prove PHP is in use;
 many frameworks route arbitrary paths. The fallback requires a PHP-specific header,

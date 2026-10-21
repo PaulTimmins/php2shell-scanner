@@ -108,6 +108,42 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(result.status, "php_unknown")
         self.assertEqual(result.probe_path, "/index.php")
 
+    def test_opnsense_legacy_asset_marks_pre_25_7_platform(self):
+        from php2shell_scanner.scanner import scan
+
+        class Reply:
+            status = 200
+
+            def __init__(self, path):
+                self.path = path
+
+            def read(self, _size):
+                if self.path.endswith("pick-a-color-1.2.3.min.css"):
+                    return b".pick-a-color-markup{} .hex-pound{}"
+                return b"<title>Login | OPNsense</title>"
+
+            def getheaders(self):
+                content_type = "text/css" if self.path.endswith(".css") else "text/html"
+                return [("Content-Type", content_type)]
+
+        class Connection:
+            def __init__(self, *_args, **_kwargs):
+                self.path = "/"
+
+            def request(self, _method, path, headers=None):
+                self.path = path
+
+            def getresponse(self):
+                return Reply(self.path)
+
+            def close(self):
+                pass
+
+        with patch("php2shell_scanner.scanner.http.client.HTTPConnection", Connection):
+            result = scan("http://192.0.2.1", 1, "/", None, False, fallback_index=True)
+        self.assertEqual(result.status, "outdated_platform")
+        self.assertIn("older than 25.7", result.reason)
+
     def test_expands_cidr(self):
         self.assertEqual(expand_targets(["192.0.2.0/30"], [("http", 80)], 10), [
             "http://192.0.2.1:80/", "http://192.0.2.2:80/"
