@@ -19,7 +19,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--workers", type=int, default=20)
     p.add_argument("--timeout", type=float, default=3.0)
     p.add_argument("--max-hosts", type=int, default=4096, help="maximum expanded IP hosts")
-    p.add_argument("--insecure", action="store_true", help="skip TLS certificate verification")
+    p.add_argument("--verify-tls", action="store_true", help="verify TLS certificates (disabled by default for IP-range scans)")
+    p.add_argument("--insecure", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--json", action="store_true", help="emit JSON Lines")
     return p
 
@@ -44,7 +45,8 @@ def main(argv: list[str] | None = None) -> int:
 
     results = []
     with ThreadPoolExecutor(max_workers=max(1, min(args.workers, 100))) as pool:
-        futures = {pool.submit(scan, target, args.timeout, args.path, args.host_header, not args.insecure): target for target in targets}
+        verify_tls = args.verify_tls and not args.insecure
+        futures = {pool.submit(scan, target, args.timeout, args.path, args.host_header, verify_tls): target for target in targets}
         for future in as_completed(futures):
             result = future.result()
             results.append(result)
@@ -58,8 +60,6 @@ def main(argv: list[str] | None = None) -> int:
         counts = Counter(result.status for result in results)
         summary = " ".join(f"{name}={counts[name]}" for name in sorted(counts))
         print(f"\nSummary: scanned={len(results)} {summary}", file=sys.stderr)
-        if any("SSLCertVerificationError" in (result.error or "") for result in results):
-            print("Hint: raw-IP HTTPS certificates often mismatch; rerun authorized ranges with --insecure.", file=sys.stderr)
         if counts["unknown"]:
             print("Hint: UNKNOWN hosts hid PHP versions or may not run PHP; scan known DNS names/paths for their virtual hosts.", file=sys.stderr)
     return 1 if any(result.status == "outdated" for result in results) else 0

@@ -116,8 +116,12 @@ For an IP behind name-based virtual hosting, supply the expected hostname:
 
 ```bash
 php2shell-scan 10.20.30.40 --scheme https --ports 443 \
-  --host-header intranet.example.test --insecure
+  --host-header intranet.example.test
 ```
+
+TLS certificate verification is disabled by default because certificates on raw IP
+ranges are commonly self-signed or issued to DNS names. Use `--verify-tls` when
+scanning named hosts if certificate validation should be enforced.
 
 The command exits `1` when any confirmed outdated version is found, `2` for invalid
 arguments, and `0` otherwise. `UNKNOWN` does not mean safe.

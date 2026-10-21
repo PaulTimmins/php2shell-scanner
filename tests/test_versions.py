@@ -1,10 +1,15 @@
 import unittest
 
 from php2shell_scanner.scanner import expand_targets
+from php2shell_scanner.cli import parser
 from php2shell_scanner.versions import assess, extract_version
 
 
 class VersionTests(unittest.TestCase):
+    def test_tls_verification_is_opt_in(self):
+        args = parser().parse_args(["192.0.2.1"])
+        self.assertFalse(args.verify_tls)
+
     def test_assessment_boundaries(self):
         cases = [
             ("8.2.34", "outdated"), ("8.2.35", "patched"),
