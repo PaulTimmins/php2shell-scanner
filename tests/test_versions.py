@@ -21,13 +21,18 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(extract_version(["nginx", "PHP/8.4.26"]), "8.4.26")
 
     def test_expands_cidr(self):
-        self.assertEqual(expand_targets(["192.0.2.0/30"], [80], ["http"], 10), [
+        self.assertEqual(expand_targets(["192.0.2.0/30"], [("http", 80)], 10), [
             "http://192.0.2.1:80/", "http://192.0.2.2:80/"
         ])
 
+    def test_endpoint_pairs_do_not_cross_product(self):
+        self.assertEqual(expand_targets(
+            ["192.0.2.1"], [("http", 80), ("https", 443)], 10
+        ), ["http://192.0.2.1:80/", "https://192.0.2.1:443/"])
+
     def test_expansion_limit(self):
         with self.assertRaises(ValueError):
-            expand_targets(["10.0.0.0/8"], [80], ["http"], 256)
+            expand_targets(["10.0.0.0/8"], [("http", 80)], 256)
 
 
 if __name__ == "__main__":

@@ -101,6 +101,10 @@ Scan a private range over HTTP:
 php2shell-scan 192.168.50.0/24 --scheme http --ports 80
 ```
 
+With no `--scheme` or `--ports`, the scanner uses HTTP on port 80 and HTTPS
+on port 443. If `--ports` is supplied, every selected scheme is tried on every
+listed port so nonstandard services can still be found.
+
 Scan selected HTTPS targets and produce JSON Lines:
 
 ```bash

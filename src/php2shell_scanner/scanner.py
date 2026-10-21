@@ -24,7 +24,7 @@ class Result:
         return asdict(self)
 
 
-def expand_targets(entries: list[str], ports: list[int], schemes: list[str], max_hosts: int) -> list[str]:
+def expand_targets(entries: list[str], endpoints: list[tuple[str, int]], max_hosts: int) -> list[str]:
     targets: list[str] = []
     for entry in entries:
         if "://" in entry:
@@ -41,10 +41,9 @@ def expand_targets(entries: list[str], ports: list[int], schemes: list[str], max
             hosts = [str(ip) for ip in network.hosts()]
         for host in hosts:
             bracketed = f"[{host}]" if ":" in host else host
-            for scheme in schemes:
-                for port in ports:
-                    targets.append(f"{scheme}://{bracketed}:{port}/")
-    if len(targets) > max_hosts * max(1, len(ports)) * max(1, len(schemes)):
+            for scheme, port in endpoints:
+                targets.append(f"{scheme}://{bracketed}:{port}/")
+    if len(targets) > max_hosts * max(1, len(endpoints)):
         raise ValueError("target expansion exceeds safety limit")
     return targets
 
