@@ -26,6 +26,36 @@ Fixed upstream releases published 21 October 2026:
 Linux distributions may backport fixes without changing the upstream-looking version.
 For distro packages, verify the vendor security notice and installed package changelog.
 
+### Distribution packages (checked 21 October 2026)
+
+| Distribution | Package | Fixed version/status |
+|---|---|---|
+| Debian 13 (trixie) | `php8.4` | `8.4.27-1~deb13u1` |
+| Debian 12 (bookworm) | `php8.2` | `8.2.35-1~deb12u1` |
+| Debian testing/unstable | `php8.4` | Unfixed in the Debian tracker at time checked |
+| CentOS Stream / corresponding RHEL streams | `php` | Vendor lists affected; no fixed RPM or RHSA published at time checked |
+
+Check the complete installed package release locally. Web response headers normally
+show only a value such as `PHP/8.2.35`, so they cannot establish whether a downstream
+backport RPM or DEB is installed.
+
+```bash
+# Debian: candidate should be at least the fixed package above for your release
+dpkg-query -W -f='${Package} ${Version}\n' 'php8.*' 'libapache2-mod-php*' 2>/dev/null
+apt-cache policy php8.2 php8.4
+
+# CentOS/RHEL: inspect installed NEVRA and look for both CVEs in the vendor changelog
+rpm -q --qf '%{NAME} %{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}\n' php php-cli php-fpm
+rpm -q --changelog php | grep -E 'CVE-2026-109618|CVE-2026-109619'
+dnf updateinfo info --cves CVE-2026-109618,CVE-2026-109619
+```
+
+Vendor status can change quickly. Recheck the
+[Debian tracker for CVE-2026-109618](https://security-tracker.debian.org/tracker/CVE-2026-109618),
+[Debian tracker for CVE-2026-109619](https://security-tracker.debian.org/tracker/CVE-2026-109619),
+and the corresponding [Red Hat CVE records](https://access.redhat.com/security/cve/cve-2026-109618)
+before using package versions as a compliance gate.
+
 ## Install
 
 Requires Python 3.10 or newer and has no runtime dependencies.
