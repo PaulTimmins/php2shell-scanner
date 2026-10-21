@@ -134,6 +134,12 @@ read-only `HEAD`. `--verify-tls` disables the compatibility retry.
 The command exits `1` when any confirmed outdated version is found, `2` for invalid
 arguments, and `0` otherwise. `UNKNOWN` does not mean safe.
 
+After streaming individual results, text mode prints a report grouped into outdated
+PHP, PHP with hidden versions, patched PHP, legacy TLS, unknown web responders, and
+unreachable error types. Each host section is capped at 25 entries by default; change
+that with `--report-limit`. JSON Lines mode emits only per-target JSON objects so it
+remains safe to pipe into another program.
+
 Only scan address space you own or are authorized to assess. Keep concurrency modest
 on production networks (`--workers 5`) and select only ports you expect to host HTTP.
 

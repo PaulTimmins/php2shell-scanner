@@ -1,8 +1,11 @@
 import unittest
 import ssl
+from contextlib import redirect_stdout
+from io import StringIO
 
 from php2shell_scanner.scanner import _tls_context, expand_targets
-from php2shell_scanner.cli import parser
+from php2shell_scanner.scanner import Result
+from php2shell_scanner.cli import _print_report, parser
 from php2shell_scanner.versions import assess, extract_version, php_header_evidence
 
 
@@ -10,6 +13,21 @@ class VersionTests(unittest.TestCase):
     def test_tls_verification_is_opt_in(self):
         args = parser().parse_args(["192.0.2.1"])
         self.assertFalse(args.verify_tls)
+
+    def test_report_groups_actionable_findings(self):
+        output = StringIO()
+        results = [
+            Result("https://old.test", "outdated", php_version="8.4.26"),
+            Result("https://hidden.test", "php_unknown", evidence="X-Powered-By: PHP", tls_mode="legacy"),
+            Result("http://down.test", "unreachable", error="TimeoutError: timed out"),
+        ]
+        with redirect_stdout(output):
+            _print_report(results, 25)
+        report = output.getvalue()
+        self.assertIn("Outdated PHP (1)", report)
+        self.assertIn("PHP version hidden (1)", report)
+        self.assertIn("Legacy TLS (1)", report)
+        self.assertIn("TimeoutError=1", report)
 
     def test_legacy_tls_context_is_unverified(self):
         context = _tls_context(False, legacy=True)

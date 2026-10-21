@@ -9,6 +9,45 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from .scanner import expand_targets, scan
 
 
+def _print_report(results: list, limit: int) -> None:
+    counts = Counter(result.status for result in results)
+    summary = " ".join(f"{name}={counts[name]}" for name in sorted(counts))
+    print(f"\nReport: scanned={len(results)} {summary}")
+
+    sections = [
+        ("Outdated PHP", lambda result: result.status == "outdated"),
+        ("PHP version hidden", lambda result: result.status == "php_unknown"),
+        ("Patched PHP", lambda result: result.status == "patched"),
+        ("Legacy TLS", lambda result: result.tls_mode == "legacy"),
+        ("Unknown web responders", lambda result: result.status == "unknown"),
+    ]
+    for title, predicate in sections:
+        matches = [result for result in results if predicate(result)]
+        if not matches:
+            continue
+        print(f"\n{title} ({len(matches)}):")
+        for result in sorted(matches, key=lambda item: item.target)[:limit]:
+            version = f" PHP/{result.php_version}" if result.php_version else ""
+            evidence = f" [{result.evidence}]" if result.evidence else ""
+            print(f"  {result.target}{version}{evidence}")
+        if len(matches) > limit:
+            print(f"  ... {len(matches) - limit} more")
+
+    unreachable = [result for result in results if result.status == "unreachable"]
+    if unreachable:
+        error_counts = Counter((result.error or "unknown error").split(":", 1)[0] for result in unreachable)
+        errors = ", ".join(f"{name}={count}" for name, count in sorted(error_counts.items()))
+        print(f"\nUnreachable ({len(unreachable)}): {errors}")
+
+    if counts["php_unknown"]:
+        print("\nAction: verify installed packages locally on PHP version-hidden hosts.")
+    if counts["unknown"]:
+        print("Action: scan known DNS names and PHP paths for unknown web responders.")
+    legacy_count = sum(result.tls_mode == "legacy" for result in results)
+    if legacy_count:
+        print(f"Action: upgrade TLS configuration on {legacy_count} legacy-compatible host(s).")
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Non-invasive PHP2Shell version exposure scanner")
     p.add_argument("targets", nargs="+", help="CIDR, hostname, IP, or complete http(s) URL")
@@ -22,6 +61,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--verify-tls", action="store_true", help="verify TLS certificates (disabled by default for IP-range scans)")
     p.add_argument("--insecure", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--json", action="store_true", help="emit JSON Lines")
+    p.add_argument("--report-limit", type=int, default=25, help="maximum hosts shown per report section (default: 25)")
     return p
 
 
@@ -60,15 +100,6 @@ def main(argv: list[str] | None = None) -> int:
                     detail = f"{detail} ({result.evidence})"
                 print(f"{result.status.upper():11} {result.target}{version}{tls}  {detail}")
     if not args.json:
-        counts = Counter(result.status for result in results)
-        summary = " ".join(f"{name}={counts[name]}" for name in sorted(counts))
-        print(f"\nSummary: scanned={len(results)} {summary}", file=sys.stderr)
-        if counts["php_unknown"]:
-            print("Warning: PHP_UNKNOWN hosts identify PHP but hide the version; verify their installed packages locally.", file=sys.stderr)
-        if counts["unknown"]:
-            print("Hint: UNKNOWN hosts have no positive PHP evidence; scan known DNS names/paths for their virtual hosts.", file=sys.stderr)
-        legacy_count = sum(result.tls_mode == "legacy" for result in results)
-        if legacy_count:
-            print(f"Warning: {legacy_count} host(s) required legacy TLS compatibility; upgrade their TLS configuration.", file=sys.stderr)
+        _print_report(results, max(1, args.report_limit))
     return 1 if any(result.status == "outdated" for result in results) else 0
 
