@@ -1,8 +1,8 @@
 # php2shell-scanner
 
 A non-invasive scanner for exposed, outdated PHP versions affected by PHP2Shell
-(CVE-2026-109618 and CVE-2026-109619). It sends one `HEAD` request per target and
-reads only the `Server` and `X-Powered-By` response headers. It sends no exploit
+(CVE-2026-109618 and CVE-2026-109619). It uses ordinary `HEAD` requests and, when
+headers are inconclusive, a capped read of the root HTML. It sends no exploit
 payload, multipart upload, large allocation, session mutation, or file write.
 
 ## What a result means
@@ -14,6 +14,49 @@ payload, multipart upload, large allocation, session mutation, or file write.
 - `UNKNOWN`: no exact version or positive PHP header evidence was exposed. PHP may
   still be present behind the requested endpoint or virtual host.
 - `UNREACHABLE`: the connection or TLS handshake failed.
+
+## Detection signals
+
+The scanner keeps exact-version findings separate from evidence that identifies PHP
+without revealing its version.
+
+| Signal | Result | Evidence recorded |
+|---|---|---|
+| `Server` or `X-Powered-By` contains `PHP/x.y.z` | Version assessment | Header value and parsed version |
+| `Server` or `X-Powered-By` contains `PHP` without a version | `PHP_UNKNOWN` | Header name and value |
+| Response sets the standard `PHPSESSID` cookie | `PHP_UNKNOWN` | Cookie name; its value is redacted |
+| Response includes an `X-PHP-*` header | `PHP_UNKNOWN` | Header name and value |
+| Root HTML has a relative `.php` `href`, `src`, or form `action` | `PHP_UNKNOWN` | First matching relative URL |
+| `/index.php` returns one of the header or cookie signals above | Corresponding result | Labeled `path=/index.php` |
+
+The default probe order is:
+
+1. Send `HEAD /` and inspect headers.
+2. If the version remains unknown, send `GET /`, read at most 64 KiB, and inspect
+   HTML URL attributes. External URLs, fragments, JavaScript URLs, and non-HTML
+   bodies are ignored.
+3. If no PHP signal is present, send `HEAD /index.php` and inspect its headers.
+
+An HTTP response from a path ending in `.php` does not by itself prove PHP is in use;
+many frameworks route arbitrary paths. The fallback requires a PHP-specific header,
+cookie, or a relative PHP endpoint in returned HTML.
+
+To reproduce the signal checks independently:
+
+```bash
+# Header, version, and PHPSESSID signals
+curl -kIsS https://host.example/ | sed -n '/^Server:/Ip;/^X-Powered-By:/Ip;/^X-PHP-/Ip;/^Set-Cookie: PHPSESSID=/Ip'
+
+# Relative PHP URLs in the first 64 KiB of HTML
+curl -ksS --range 0-65535 https://host.example/ \
+  | grep -Eio "(href|src|action)=['\"][^'\"]+\.php([^'\"]*)?['\"]" | head
+
+# Fallback path
+curl -kIsS https://host.example/index.php
+
+# For a server requiring obsolete TLS compatibility (OpenSSL builds)
+curl -kIsS --ciphers 'DEFAULT:@SECLEVEL=0' https://host.example/
+```
 
 Fixed upstream releases published 21 October 2026:
 
@@ -135,8 +178,8 @@ scanning named hosts if certificate validation should be enforced.
 When an unverified HTTPS connection fails because of an obsolete signature algorithm
 or OpenSSL security level, the scanner automatically retries with legacy TLS
 compatibility. Successful downgraded connections are labeled `[legacy TLS]`. This
-changes only the scanner's client-side TLS policy; the request remains a single
-read-only `HEAD`. `--verify-tls` disables the compatibility retry.
+changes only the scanner's client-side TLS policy; application probes remain
+read-only HTTP requests. `--verify-tls` disables the compatibility retry.
 
 The command exits `1` when any confirmed outdated version is found, `2` for invalid
 arguments, and `0` otherwise. `UNKNOWN` does not mean safe.
@@ -159,4 +202,8 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 Sources: [PHP security release](https://www.php.net/),
 [PHP 8 changelog](https://www.php.net/ChangeLog-8.php), and
 [PHP unsupported branches](https://www.php.net/eol.php).
+
+## License
+
+BSD 3-Clause. See [LICENSE](LICENSE).
 
