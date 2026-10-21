@@ -5,7 +5,7 @@ from php2shell_scanner.fingerprints import (
     fingerprint_applications,
     is_php_application,
     is_unsupported_php_application,
-    pre_php8_application,
+    legacy_application_version,
 )
 
 
@@ -138,6 +138,14 @@ class FingerprintTests(unittest.TestCase):
             "Zabbix": '<title>Zabbix 5.4.12</title>',
             "Laravel": '<h1>Laravel v5.8.38</h1>',
             "phpMyAdmin": '<title>phpMyAdmin 4.9.11</title>',
+            "FreePBX": '<title>FreePBX 15.0.37</title>',
+            "VitalPBX": '<title>VitalPBX 3.2.4</title>',
+            "OpenMediaVault": '<title>openmediavault 7.7.24 Workbench</title>',
+            "Icinga Web 2": '<title>Icinga Web 2 2.8.6</title>',
+            "Pandora FMS": '<title>Pandora FMS 759</title>',
+            "Mautic": '<meta name="generator" content="Mautic 4.3.1">',
+            "phpVirtualBox": '<title>phpVirtualBox 5.2-1</title>',
+            "SuiteCRM": '<title>SuiteCRM 8.9.1</title>',
         }
         for application, html in cases.items():
             with self.subTest(application=application):
@@ -146,12 +154,16 @@ class FingerprintTests(unittest.TestCase):
                     applications, [], html.encode(), "text/html"
                 )
                 self.assertIn(application, versions)
-                self.assertEqual(pre_php8_application(versions)[0], application)
+                self.assertEqual(legacy_application_version(versions)[0], application)
 
-    def test_supported_release_is_not_a_pre_php8_signal(self):
-        self.assertIsNone(pre_php8_application({"Cacti": "1.2.20"}))
-        self.assertIsNone(pre_php8_application({"WordPress": "5.6"}))
-        self.assertIsNone(pre_php8_application({"LibreNMS": "21.1.0"}))
+    def test_supported_release_is_not_a_legacy_signal(self):
+        self.assertIsNone(legacy_application_version({"Cacti": "1.2.20"}))
+        self.assertIsNone(legacy_application_version({"WordPress": "5.6"}))
+        self.assertIsNone(legacy_application_version({"LibreNMS": "21.1.0"}))
+        self.assertIsNone(legacy_application_version({"FreePBX": "16.0"}))
+        self.assertIsNone(legacy_application_version({"Icinga Web 2": "2.9.0"}))
+        self.assertIsNone(legacy_application_version({"SuiteCRM": "7.15.1"}))
+        self.assertIsNone(legacy_application_version({"SuiteCRM": "8.10.0"}))
 
 
 if __name__ == "__main__":

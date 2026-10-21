@@ -203,7 +203,7 @@ class VersionTests(unittest.TestCase):
             result = scan("http://192.0.2.1", 1, "/", None, False, fallback_index=True)
         self.assertEqual(result.status, "outdated_platform")
         self.assertEqual(result.application_versions, {"WordPress": "5.5.15"})
-        self.assertIn("PHP 8 support starts at 5.6", result.evidence)
+        self.assertIn("supported/PHP 8 boundary: 5.6", result.evidence)
 
     def test_expands_cidr(self):
         self.assertEqual(expand_targets(["192.0.2.0/30"], [("http", 80)], 10), [

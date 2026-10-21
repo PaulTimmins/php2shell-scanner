@@ -88,15 +88,22 @@ UNSUPPORTED_PHP_APPLICATIONS = {
     "trixbox CE",
 }
 
-# Conservative first releases whose upstream projects support PHP 8.  These
-# rules only run when an exact application version is present in the response.
-PHP8_APPLICATION_MINIMUMS = {
+# Conservative support or PHP 8 release floors. These rules only run when an
+# exact application version is present in the response.
+APPLICATION_VERSION_FLOORS = {
     "Cacti": (1, 2, 20),
+    "FreePBX": (16,),
+    "Icinga Web 2": (2, 9),
     "Laravel": (6,),
     "LibreNMS": (21, 1),
+    "Mautic": (4, 4),
     "Nextcloud": (21,),
+    "OpenMediaVault": (8,),
+    "Pandora FMS": (760,),
+    "VitalPBX": (4,),
     "WordPress": (5, 6),
     "Zabbix": (6,),
+    "phpVirtualBox": (7, 1),
     # The 5.x line is the conservative boundary. Some late 4.x builds can be
     # made to work, but upstream did not document the whole line for PHP 8.
     "phpMyAdmin": (5,),
@@ -104,12 +111,20 @@ PHP8_APPLICATION_MINIMUMS = {
 
 VERSION_PATTERNS = {
     "Cacti": (r"\bcacti(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "FreePBX": (r"\bfreepbx(?:\s+distro)?(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "Icinga Web 2": (r"\bicinga web 2(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
     "Laravel": (r"\blaravel(?:\s+framework)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){0,3})\b",),
     "LibreNMS": (r"\blibrenms(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "Mautic": (r"\bmautic(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
     "Nextcloud": (r"generator[^>]+nextcloud(?:\s+|/)([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "OpenMediaVault": (r"\bopenmediavault(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "Pandora FMS": (r"\bpandora fms(?:\s+(?:ng|version))?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){0,3})\b",),
+    "SuiteCRM": (r"\bsuitecrm(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "VitalPBX": (r"\bvitalpbx(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){0,3})\b",),
     "WordPress": (r"generator[^>]+wordpress(?:\s+|/)([0-9]+(?:\.[0-9]+){0,3})\b",),
     "Zabbix": (r"\bzabbix(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
     "phpMyAdmin": (r"\bphpmyadmin(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
+    "phpVirtualBox": (r"\bphpvirtualbox(?:\s+version)?\s*(?:v|version\s*)?([0-9]+(?:\.[0-9]+){1,3})\b",),
 }
 
 
@@ -139,11 +154,22 @@ def fingerprint_application_versions(
     return found
 
 
-def pre_php8_application(application_versions: dict[str, str]) -> tuple[str, str, str] | None:
-    """Return the first app version below its defensible PHP 8 boundary."""
+def legacy_application_version(application_versions: dict[str, str]) -> tuple[str, str, str] | None:
+    """Return the first app version below its defensible support/runtime floor."""
     for application in sorted(application_versions):
-        minimum = PHP8_APPLICATION_MINIMUMS.get(application)
+        minimum = APPLICATION_VERSION_FLOORS.get(application)
         if not minimum:
+            if application == "SuiteCRM":
+                version = application_versions[application]
+                parts = tuple(int(value) for value in re.findall(r"\d+", version))
+                unsupported = (
+                    not parts
+                    or parts[0] < 7
+                    or (parts[0] == 7 and parts < (7, 15))
+                    or (parts[0] == 8 and parts < (8, 10))
+                )
+                if unsupported:
+                    return application, version, "7.15 ESR or 8.10"
             continue
         version = application_versions[application]
         parts = tuple(int(value) for value in re.findall(r"\d+", version))

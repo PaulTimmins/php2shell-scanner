@@ -13,7 +13,7 @@ from .fingerprints import (
     fingerprint_applications,
     is_php_application,
     is_unsupported_php_application,
-    pre_php8_application,
+    legacy_application_version,
 )
 from .versions import assess, extract_version, php_header_evidence, relative_php_url_evidence
 
@@ -153,14 +153,14 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
         application_versions = fingerprint_application_versions(
             applications, all_headers, body, content_type
         )
-        legacy_application = pre_php8_application(application_versions)
+        legacy_application = legacy_application_version(application_versions)
         if legacy_application:
             application, application_version, boundary = legacy_application
-            evidence = f"{application}/{application_version} (PHP 8 support starts at {boundary})"
+            evidence = f"{application}/{application_version} (supported/PHP 8 boundary: {boundary})"
             application_evidence[application].append(evidence)
             return Result(
                 target, "outdated_platform", response_status, evidence=evidence,
-                reason=f"{application} {application_version} predates its PHP 8 compatible release line",
+                reason=f"{application} {application_version} is below its supported or PHP 8 compatible release line",
                 tls_mode=tls_mode, probe_path=request_path, applications=applications,
                 application_evidence=application_evidence, application_versions=application_versions,
             )

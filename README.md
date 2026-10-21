@@ -56,12 +56,31 @@ PHP application is positive evidence of a PHP stack but does not reveal its PHP
 version, so it produces `PHP_UNKNOWN` unless an exact version signal is also present.
 
 When ordinary response HTML exposes an exact product version, the scanner checks
-conservative upstream PHP 8 compatibility boundaries. These versions produce
-`OUTDATED_PLATFORM`: WordPress before 5.6, Nextcloud before 21, Zabbix before 6.0,
-Cacti before 1.2.20, LibreNMS before 21.1, Laravel before 6, and phpMyAdmin before 5.
+conservative upstream support and PHP 8 compatibility boundaries. These versions
+produce `OUTDATED_PLATFORM`:
+
+| Product | Red-flag version | Basis |
+|---|---:|---|
+| WordPress | before 5.6 | PHP 8 compatibility |
+| Nextcloud | before 21 | PHP 8 compatibility |
+| Zabbix | before 6.0 | PHP 8 compatibility |
+| Cacti | before 1.2.20 | PHP 8 compatibility milestone |
+| LibreNMS | before 21.1 | PHP 8 blockers removed |
+| Laravel | before 6 | PHP 8 compatible maintained lines |
+| phpMyAdmin | before 5 | Conservative PHP 8 boundary |
+| FreePBX | before 16 | Version 15 and older are EOL |
+| VitalPBX | before 4 | Version 3 is EOL |
+| openmediavault | before 8 | Version 7 and older are EOL |
+| Icinga Web 2 | before 2.9 | PHP 8 support |
+| Pandora FMS | before 760 | PHP 8 support |
+| Mautic | before 4.4 | PHP 8.0 support |
+| phpVirtualBox | before 7.1 | Current maintained PHP 8 release line |
+| SuiteCRM 7 | before 7.15 | Upstream support lifecycle |
+| SuiteCRM 8 | before 8.10 | Upstream support lifecycle |
+
 The finding records the observed product version and its boundary. It means the
-application release predates its project's PHP 8 compatible line; it does not claim
-to have measured the installed PHP runtime.
+application release is outside its published support line or predates its project's
+PHP 8 compatible line; it does not claim to have measured the installed PHP runtime.
 
 The version must appear in product-qualified text such as a generator meta tag,
 title, footer, or framework error page. Branding without an exact version remains
@@ -108,6 +127,14 @@ Implementation references include the official
 [Cacti PHP 8 milestone](https://github.com/Cacti/cacti/issues/4551),
 [LibreNMS PHP 8 compatibility change](https://github.com/librenms/librenms/commit/39217d003ffcc730fa7186255de7e553f4ac2cdf),
 [Laravel PHP 8 support](https://laravel.com/blog/laravel-php-8-support),
+[FreePBX lifecycle](https://sangomakb.atlassian.net/wiki/spaces/FP/pages/653197359/FreePBX+Open+Source+-+FreePBX+Versions),
+[VitalPBX 3 EOL announcement](https://vitalpbx.com/blog/important-update-end-of-life-eol-announcement-for-vitalpbx-version-3/),
+[openmediavault releases](https://docs.openmediavault.org/en/8.x/releases.html),
+[Icinga Web 2.9 PHP 8 release](https://icinga.com/blog/releasing-icinga-web-v2-9-0/),
+[Pandora FMS PHP requirements](https://pandorafms.com/manual/!current/en/documentation/pandorafms/installation/01_installing),
+[Mautic releases](https://mautic.org/releases/),
+[phpVirtualBox releases](https://github.com/phpvirtualbox/phpvirtualbox/releases),
+[SuiteCRM supported versions](https://docs.suitecrm.com/community/supported-versions/),
 [AsteriskNOW succession documentation](https://docs.asterisk.org/About-the-Project/Sangoma-and-Digium-Join-Together-FAQ/),
 [VitalPBX projects](https://github.com/VitalPBX),
 [IssabelPBX source](https://github.com/IssabelFoundation/issabelPBX),
