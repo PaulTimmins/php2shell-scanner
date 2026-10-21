@@ -101,6 +101,15 @@ class FingerprintTests(unittest.TestCase):
         )
         self.assertEqual(found, {})
 
+    def test_cacti_csrf_token_does_not_match_pfsense(self):
+        found = fingerprint_applications(
+            [],
+            b'<title>Login to Cacti</title><input name="__csrf_magic" value="csrfMagicToken">',
+            "text/html",
+        )
+        self.assertIn("Cacti", found)
+        self.assertNotIn("pfSense", found)
+
 
 if __name__ == "__main__":
     unittest.main()

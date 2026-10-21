@@ -30,7 +30,7 @@ RULES = {
     "Craft CMS": (r"\bcraft_csrf_token=", r"generator[^>]+craft cms"),
     # Firewalls, PBX systems, storage appliances, and monitoring consoles.
     "OPNsense": (r"\bopnsense\b", r"/ui/themes/[a-z0-9_-]+/"),
-    "pfSense": (r"\bpfsense\b", r"\bcsrfmagictoken\b", r"/themes/pfsense/"),
+    "pfSense": (r"\bpfsense\b", r"/themes/pfsense/"),
     "OpenMediaVault": (r"\bopenmediavault\b", r"\bomv\.workspace\b"),
     "FreePBX": (r"\bfreepbx\b", r"/admin/assets/"),
     "VitalPBX": (r"\bvitalpbx\b", r"\bvital pbx\b"),
