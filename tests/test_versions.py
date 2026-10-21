@@ -3,7 +3,7 @@ import ssl
 
 from php2shell_scanner.scanner import _tls_context, expand_targets
 from php2shell_scanner.cli import parser
-from php2shell_scanner.versions import assess, extract_version
+from php2shell_scanner.versions import assess, extract_version, php_header_evidence
 
 
 class VersionTests(unittest.TestCase):
@@ -30,6 +30,18 @@ class VersionTests(unittest.TestCase):
 
     def test_extracts_header_version(self):
         self.assertEqual(extract_version(["nginx", "PHP/8.4.26"]), "8.4.26")
+
+    def test_identifies_versionless_php_header(self):
+        self.assertEqual(php_header_evidence([("X-Powered-By", "PHP")]), ["X-Powered-By: PHP"])
+
+    def test_identifies_php_session_cookie_without_disclosing_value(self):
+        self.assertEqual(
+            php_header_evidence([("Set-Cookie", "PHPSESSID=secret; path=/; HttpOnly")]),
+            ["Set-Cookie: PHPSESSID=<redacted>"],
+        )
+
+    def test_does_not_guess_php_from_generic_headers(self):
+        self.assertEqual(php_header_evidence([("Server", "nginx"), ("Set-Cookie", "session=abc")]), [])
 
     def test_expands_cidr(self):
         self.assertEqual(expand_targets(["192.0.2.0/30"], [("http", 80)], 10), [

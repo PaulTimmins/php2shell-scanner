@@ -56,13 +56,17 @@ def main(argv: list[str] | None = None) -> int:
                 version = f" PHP/{result.php_version}" if result.php_version else ""
                 tls = " [legacy TLS]" if result.tls_mode == "legacy" else ""
                 detail = result.reason or result.error or ""
+                if result.status == "php_unknown" and result.evidence:
+                    detail = f"{detail} ({result.evidence})"
                 print(f"{result.status.upper():11} {result.target}{version}{tls}  {detail}")
     if not args.json:
         counts = Counter(result.status for result in results)
         summary = " ".join(f"{name}={counts[name]}" for name in sorted(counts))
         print(f"\nSummary: scanned={len(results)} {summary}", file=sys.stderr)
+        if counts["php_unknown"]:
+            print("Warning: PHP_UNKNOWN hosts identify PHP but hide the version; verify their installed packages locally.", file=sys.stderr)
         if counts["unknown"]:
-            print("Hint: UNKNOWN hosts hid PHP versions or may not run PHP; scan known DNS names/paths for their virtual hosts.", file=sys.stderr)
+            print("Hint: UNKNOWN hosts have no positive PHP evidence; scan known DNS names/paths for their virtual hosts.", file=sys.stderr)
         legacy_count = sum(result.tls_mode == "legacy" for result in results)
         if legacy_count:
             print(f"Warning: {legacy_count} host(s) required legacy TLS compatibility; upgrade their TLS configuration.", file=sys.stderr)

@@ -9,8 +9,10 @@ payload, multipart upload, large allocation, session mutation, or file write.
 
 - `OUTDATED`: the server exposed an exact PHP version below its upstream fixed release.
 - `PATCHED`: the exposed version is at or above the upstream fixed release.
-- `UNKNOWN`: PHP may be present, but no exact version was exposed. Check the package
-  locally; a remote version-only scanner cannot safely prove its patch state.
+- `PHP_UNKNOWN`: PHP is positively identified by a header or `PHPSESSID` cookie, but
+  its exact version is hidden. Check the installed package locally.
+- `UNKNOWN`: no exact version or positive PHP header evidence was exposed. PHP may
+  still be present behind the requested endpoint or virtual host.
 - `UNREACHABLE`: the connection or TLS handshake failed.
 
 Fixed upstream releases published 21 October 2026:

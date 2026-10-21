@@ -8,7 +8,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
-from .versions import assess, extract_version
+from .versions import assess, extract_version, php_header_evidence
 
 
 @dataclass
@@ -102,8 +102,12 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
         evidence_values = [value for key, value in header_pairs if key.lower() in {"server", "x-powered-by"}]
         version = extract_version(evidence_values)
         if version is None:
+            php_evidence = php_header_evidence(header_pairs)
+            if php_evidence:
+                return Result(target, "php_unknown", response_status, evidence="; ".join(php_evidence),
+                              reason="PHP identified, but its exact version is hidden", tls_mode=tls_mode)
             return Result(target, "unknown", response_status, evidence="; ".join(evidence_values) or None,
-                          reason="no exact PHP version exposed in Server or X-Powered-By headers", tls_mode=tls_mode)
+                          reason="no PHP version or positive PHP header evidence", tls_mode=tls_mode)
         verdict = assess(version)
         return Result(target, verdict.status, response_status, version, "; ".join(evidence_values), verdict.reason,
                       tls_mode=tls_mode)

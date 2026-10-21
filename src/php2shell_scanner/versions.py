@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 
 PHP_VERSION = re.compile(r"(?i)\bPHP(?:/|\s+)(\d+\.\d+\.\d+(?:[-+._a-z0-9]*)?)")
+PHP_TOKEN = re.compile(r"(?i)\bPHP\b")
 
 # First upstream releases containing the 21 October 2026 PHP2Shell fixes.
 FIXED_RELEASES = {
@@ -28,6 +29,20 @@ def extract_version(values: list[str]) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+def php_header_evidence(headers: list[tuple[str, str]]) -> list[str]:
+    """Return response-header evidence that identifies PHP without guessing."""
+    evidence: list[str] = []
+    for name, value in headers:
+        lowered = name.lower()
+        if lowered in {"server", "x-powered-by"} and PHP_TOKEN.search(value):
+            evidence.append(f"{name}: {value}")
+        elif lowered == "set-cookie" and re.match(r"(?i)^PHPSESSID=", value):
+            evidence.append(f"{name}: PHPSESSID=<redacted>")
+        elif lowered.startswith("x-php-"):
+            evidence.append(f"{name}: {value}")
+    return evidence
 
 
 def _numeric(version: str) -> tuple[int, int, int] | None:
