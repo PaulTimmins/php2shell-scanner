@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from .scanner import expand_targets, scan
+
+
+def parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="Non-invasive PHP2Shell version exposure scanner")
+    p.add_argument("targets", nargs="+", help="CIDR, hostname, IP, or complete http(s) URL")
+    p.add_argument("--ports", default="80,443", help="comma-separated ports (default: 80,443)")
+    p.add_argument("--scheme", choices=("http", "https", "both"), default="both")
+    p.add_argument("--path", default="/", help="request path used for fingerprinting")
+    p.add_argument("--host-header", help="virtual host name to send when scanning IPs")
+    p.add_argument("--workers", type=int, default=20)
+    p.add_argument("--timeout", type=float, default=3.0)
+    p.add_argument("--max-hosts", type=int, default=4096, help="maximum expanded IP hosts")
+    p.add_argument("--insecure", action="store_true", help="skip TLS certificate verification")
+    p.add_argument("--json", action="store_true", help="emit JSON Lines")
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parser().parse_args(argv)
+    try:
+        ports = [int(value) for value in args.ports.split(",")]
+        if not ports or any(port < 1 or port > 65535 for port in ports):
+            raise ValueError("ports must be between 1 and 65535")
+        schemes = ["http", "https"] if args.scheme == "both" else [args.scheme]
+        targets = expand_targets(args.targets, ports, schemes, args.max_hosts)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    results = []
+    with ThreadPoolExecutor(max_workers=max(1, min(args.workers, 100))) as pool:
+        futures = {pool.submit(scan, target, args.timeout, args.path, args.host_header, not args.insecure): target for target in targets}
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
+            if args.json:
+                print(json.dumps(result.as_dict(), sort_keys=True))
+            else:
+                version = f" PHP/{result.php_version}" if result.php_version else ""
+                detail = result.reason or result.error or ""
+                print(f"{result.status.upper():11} {result.target}{version}  {detail}")
+    return 1 if any(result.status == "outdated" for result in results) else 0
+

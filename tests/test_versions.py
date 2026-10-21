@@ -1,0 +1,35 @@
+import unittest
+
+from php2shell_scanner.scanner import expand_targets
+from php2shell_scanner.versions import assess, extract_version
+
+
+class VersionTests(unittest.TestCase):
+    def test_assessment_boundaries(self):
+        cases = [
+            ("8.2.34", "outdated"), ("8.2.35", "patched"),
+            ("8.3.35", "outdated"), ("8.3.36", "patched"),
+            ("8.4.26", "outdated"), ("8.4.27", "patched"),
+            ("8.5.11", "outdated"), ("8.5.12", "patched"),
+            ("8.1.34", "outdated"),
+        ]
+        for version, status in cases:
+            with self.subTest(version=version):
+                self.assertEqual(assess(version).status, status)
+
+    def test_extracts_header_version(self):
+        self.assertEqual(extract_version(["nginx", "PHP/8.4.26"]), "8.4.26")
+
+    def test_expands_cidr(self):
+        self.assertEqual(expand_targets(["192.0.2.0/30"], [80], ["http"], 10), [
+            "http://192.0.2.1:80/", "http://192.0.2.2:80/"
+        ])
+
+    def test_expansion_limit(self):
+        with self.assertRaises(ValueError):
+            expand_targets(["10.0.0.0/8"], [80], ["http"], 256)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
