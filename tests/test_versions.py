@@ -2,6 +2,7 @@ import unittest
 import ssl
 from contextlib import redirect_stdout
 from io import StringIO
+from unittest.mock import patch
 
 from php2shell_scanner.scanner import _tls_context, expand_targets
 from php2shell_scanner.scanner import Result
@@ -13,6 +14,7 @@ class VersionTests(unittest.TestCase):
     def test_tls_verification_is_opt_in(self):
         args = parser().parse_args(["192.0.2.1"])
         self.assertFalse(args.verify_tls)
+        self.assertIsNone(args.path)
 
     def test_report_groups_actionable_findings(self):
         output = StringIO()
@@ -60,6 +62,39 @@ class VersionTests(unittest.TestCase):
 
     def test_does_not_guess_php_from_generic_headers(self):
         self.assertEqual(php_header_evidence([("Server", "nginx"), ("Set-Cookie", "session=abc")]), [])
+
+    def test_index_php_fallback_can_identify_php(self):
+        from php2shell_scanner.scanner import scan
+
+        class Reply:
+            status = 200
+
+            def __init__(self, path):
+                self.path = path
+
+            def read(self, _size):
+                return b""
+
+            def getheaders(self):
+                return [("X-Powered-By", "PHP")] if self.path == "/index.php" else [("Server", "nginx")]
+
+        class Connection:
+            def __init__(self, *_args, **_kwargs):
+                self.path = "/"
+
+            def request(self, _method, path, headers=None):
+                self.path = path
+
+            def getresponse(self):
+                return Reply(self.path)
+
+            def close(self):
+                pass
+
+        with patch("php2shell_scanner.scanner.http.client.HTTPConnection", Connection):
+            result = scan("http://192.0.2.1", 1, "/", None, False, fallback_index=True)
+        self.assertEqual(result.status, "php_unknown")
+        self.assertEqual(result.probe_path, "/index.php")
 
     def test_expands_cidr(self):
         self.assertEqual(expand_targets(["192.0.2.0/30"], [("http", 80)], 10), [

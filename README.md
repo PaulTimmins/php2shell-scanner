@@ -107,6 +107,11 @@ With no `--scheme` or `--ports`, the scanner uses HTTP on port 80 and HTTPS
 on port 443. If `--ports` is supplied, every selected scheme is tried on every
 listed port so nonstandard services can still be found.
 
+The default path check starts at `/`. If that does not expose an exact PHP
+version, the scanner also sends a `HEAD` request to `/index.php`. A finding from
+the fallback is labeled `path=/index.php`. Supplying `--path` disables the
+fallback and checks only the requested path.
+
 Scan selected HTTPS targets and produce JSON Lines:
 
 ```bash

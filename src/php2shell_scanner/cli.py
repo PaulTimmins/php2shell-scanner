@@ -29,7 +29,8 @@ def _print_report(results: list, limit: int) -> None:
         for result in sorted(matches, key=lambda item: item.target)[:limit]:
             version = f" PHP/{result.php_version}" if result.php_version else ""
             evidence = f" [{result.evidence}]" if result.evidence else ""
-            print(f"  {result.target}{version}{evidence}")
+            path = f" path={result.probe_path}" if result.probe_path and result.probe_path != "/" else ""
+            print(f"  {result.target}{version}{path}{evidence}")
         if len(matches) > limit:
             print(f"  ... {len(matches) - limit} more")
 
@@ -53,7 +54,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("targets", nargs="+", help="CIDR, hostname, IP, or complete http(s) URL")
     p.add_argument("--ports", help="comma-separated ports; explicit ports are tried with each selected scheme")
     p.add_argument("--scheme", choices=("http", "https", "both"), default="both")
-    p.add_argument("--path", default="/", help="request path used for fingerprinting")
+    p.add_argument("--path", help="single request path; default probes / and then /index.php when needed")
     p.add_argument("--host-header", help="virtual host name to send when scanning IPs")
     p.add_argument("--workers", type=int, default=20)
     p.add_argument("--timeout", type=float, default=3.0)
@@ -86,7 +87,11 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     with ThreadPoolExecutor(max_workers=max(1, min(args.workers, 100))) as pool:
         verify_tls = args.verify_tls and not args.insecure
-        futures = {pool.submit(scan, target, args.timeout, args.path, args.host_header, verify_tls): target for target in targets}
+        request_path = args.path or "/"
+        futures = {
+            pool.submit(scan, target, args.timeout, request_path, args.host_header, verify_tls, args.path is None): target
+            for target in targets
+        }
         for future in as_completed(futures):
             result = future.result()
             results.append(result)
@@ -95,10 +100,11 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 version = f" PHP/{result.php_version}" if result.php_version else ""
                 tls = " [legacy TLS]" if result.tls_mode == "legacy" else ""
+                path = f" [path={result.probe_path}]" if result.probe_path and result.probe_path != "/" else ""
                 detail = result.reason or result.error or ""
                 if result.status == "php_unknown" and result.evidence:
                     detail = f"{detail} ({result.evidence})"
-                print(f"{result.status.upper():11} {result.target}{version}{tls}  {detail}")
+                print(f"{result.status.upper():11} {result.target}{version}{tls}{path}  {detail}")
     if not args.json:
         _print_report(results, max(1, args.report_limit))
     return 1 if any(result.status == "outdated" for result in results) else 0

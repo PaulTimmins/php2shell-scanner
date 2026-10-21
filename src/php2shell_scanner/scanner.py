@@ -21,6 +21,7 @@ class Result:
     reason: str | None = None
     error: str | None = None
     tls_mode: str | None = None
+    probe_path: str | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -62,7 +63,8 @@ def _tls_context(verify_tls: bool, legacy: bool = False) -> ssl.SSLContext:
     return context
 
 
-def scan(target: str, timeout: float, path: str, host_header: str | None, verify_tls: bool) -> Result:
+def scan(target: str, timeout: float, path: str, host_header: str | None, verify_tls: bool,
+         fallback_index: bool = False) -> Result:
     parsed = urlsplit(target)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         return Result(target, "error", error="target must be an http(s) URL")
@@ -104,13 +106,26 @@ def scan(target: str, timeout: float, path: str, host_header: str | None, verify
         if version is None:
             php_evidence = php_header_evidence(header_pairs)
             if php_evidence:
-                return Result(target, "php_unknown", response_status, evidence="; ".join(php_evidence),
-                              reason="PHP identified, but its exact version is hidden", tls_mode=tls_mode)
-            return Result(target, "unknown", response_status, evidence="; ".join(evidence_values) or None,
-                          reason="no PHP version or positive PHP header evidence", tls_mode=tls_mode)
+                result = Result(target, "php_unknown", response_status, evidence="; ".join(php_evidence),
+                                reason="PHP identified, but its exact version is hidden", tls_mode=tls_mode,
+                                probe_path=request_path)
+            else:
+                result = Result(target, "unknown", response_status, evidence="; ".join(evidence_values) or None,
+                                reason="no PHP version or positive PHP header evidence", tls_mode=tls_mode,
+                                probe_path=request_path)
+            if fallback_index and request_path != "/index.php":
+                index_result = scan(target, timeout, "/index.php", host_header, verify_tls, False)
+                exact_statuses = {"outdated", "patched", "not_affected"}
+                if index_result.status in exact_statuses:
+                    return index_result
+                if result.status == "unknown" and index_result.status == "php_unknown":
+                    return index_result
+                result.tls_mode = result.tls_mode or index_result.tls_mode
+                result.reason = f"{result.reason}; also checked /index.php"
+            return result
         verdict = assess(version)
         return Result(target, verdict.status, response_status, version, "; ".join(evidence_values), verdict.reason,
-                      tls_mode=tls_mode)
+                      tls_mode=tls_mode, probe_path=request_path)
     except (OSError, ssl.SSLError, http.client.HTTPException, ValueError) as exc:
         return Result(target, "unreachable", error=f"{type(exc).__name__}: {exc}")
 
